@@ -1,9 +1,28 @@
 import { SchoolSettings, TPType } from './types';
 
+// Helper untuk membaca Env Var dengan aman (mendukung Vite, Create-React-App, dan Vercel)
+const getEnv = (key: string) => {
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env) return process.env[key];
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) return import.meta.env[key];
+  } catch (e) { return ""; }
+  return "";
+};
+
 // --- KONFIGURASI DATABASE ---
-// SUPABASE (Wajib: Lebih Cepat & Stabil)
-export const SUPABASE_URL = ""; 
-export const SUPABASE_KEY = ""; 
+
+// OPSI 1: JIKA MENGGUNAKAN VERCEL ENVIRONMENT VARIABLES (SETTINGS > ENVIRONMENT VARIABLES)
+// Masukkan Key dengan nama: REACT_APP_SUPABASE_URL dan REACT_APP_SUPABASE_KEY di Dashboard Vercel.
+const ENV_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL');
+const ENV_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY');
+
+// OPSI 2: JIKA TIDAK PAKAI ENV VARS, ISI MANUAL DI BAWAH INI (HARDCODE)
+// Ganti tanda kutip kosong "" di bawah ini dengan URL dan Key dari Supabase Anda.
+// Contoh: export const SUPABASE_URL = ENV_URL || "https://abcdefgh.supabase.co";
+export const SUPABASE_URL = ENV_URL || "https://wohhrumqbuwhfulhrlfy.supabase.co"; 
+export const SUPABASE_KEY = ENV_KEY || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_"; 
 
 // -------------------------------------
 

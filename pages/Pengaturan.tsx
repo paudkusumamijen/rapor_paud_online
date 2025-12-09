@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
 import { SUPABASE_URL, SUPABASE_KEY } from '../constants';
-import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame } from 'lucide-react';
+import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2 } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
   const { settings, setSettings, refreshData, isLoading } = useApp();
@@ -15,12 +15,14 @@ const Pengaturan: React.FC = () => {
   const [connStatus, setConnStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const isHardcodedSb = !!SUPABASE_URL;
+  // Cek apakah konfigurasi sudah ditanam (hardcoded atau via Env Vars)
+  const isHardcodedSb = !!SUPABASE_URL && !!SUPABASE_KEY;
 
   useEffect(() => { setFormData(settings); }, [settings]);
   
   // Load initial config from localStorage or constants
   useEffect(() => {
+    // Jika hardcoded, gunakan nilai dari constants. Jika tidak, ambil dari localStorage
     const storedSbUrl = SUPABASE_URL || localStorage.getItem('supabase_url') || '';
     const storedSbKey = SUPABASE_KEY || localStorage.getItem('supabase_key') || '';
     
@@ -54,7 +56,8 @@ const Pengaturan: React.FC = () => {
       
       if (!sbUrl || !sbKey) return alert("URL dan Key Supabase wajib diisi.");
       
-      if (!SUPABASE_URL) {
+      // Hanya simpan ke localStorage jika BUKAN mode hardcoded
+      if (!isHardcodedSb) {
         localStorage.setItem('supabase_url', sbUrl);
         localStorage.setItem('supabase_key', sbKey);
       }
@@ -90,37 +93,53 @@ const Pengaturan: React.FC = () => {
                 </div>
 
                 <div className="space-y-4 animate-in fade-in duration-300">
-                    {isHardcodedSb && (
-                            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex items-center gap-2 text-indigo-700 text-sm mb-2">
-                            <Lock size={16}/> Konfigurasi dikunci via <code>constants.ts</code>
+                    {isHardcodedSb ? (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                            <div className="flex items-center gap-2 text-indigo-700 font-bold mb-2">
+                                <Lock size={18}/> Terkunci (Config File / Env Vars)
                             </div>
+                            <p className="text-xs text-indigo-600 mb-2">
+                                URL dan API Key telah ditanam di dalam kode (<code>constants.ts</code>) atau Environment Variables.
+                                Aplikasi akan otomatis terhubung di perangkat manapun.
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-green-700 font-semibold bg-green-100 p-2 rounded border border-green-200">
+                                <CheckCircle2 size={14}/> Database Siap Digunakan
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-800 mb-2">
+                            <strong>Mode Manual:</strong> Anda harus memasukkan URL & Key. Agar permanen, edit file <code>constants.ts</code>.
+                        </div>
                     )}
+
                     <div>
                         <label className="label">Project URL</label>
-                        <input className="input font-mono text-sm" placeholder="https://xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value)} disabled={isHardcodedSb} />
+                        <input className="input font-mono text-sm disabled:bg-slate-100 disabled:text-slate-500" placeholder="https://xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value)} disabled={isHardcodedSb} />
                     </div>
                     <div>
                         <label className="label">API Key (public/anon)</label>
-                        <input className="input font-mono text-sm" type="password" placeholder="eyJhbGciOiJIUz..." value={sbKey} onChange={e => setSbKey(e.target.value)} disabled={isHardcodedSb} />
+                        <input className="input font-mono text-sm disabled:bg-slate-100 disabled:text-slate-500" type="password" placeholder="eyJhbGciOiJIUz..." value={sbKey} onChange={e => setSbKey(e.target.value)} disabled={isHardcodedSb} />
                     </div>
-                    <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded border border-slate-200">
-                        <strong>Cara mendapatkan kredensial:</strong>
-                        <ol className="list-decimal pl-4 mt-1 space-y-1">
-                            <li>Buat project baru di <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a>.</li>
-                            <li>Masuk ke <strong>Settings {'>'} API</strong>. Copy URL & Anon Key.</li>
-                            <li>Buka <strong>SQL Editor</strong> di Supabase, jalankan script pembuatan tabel (Tersedia di dokumentasi aplikasi).</li>
-                        </ol>
-                    </div>
+                    
+                    {!isHardcodedSb && (
+                        <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded border border-slate-200">
+                            <strong>Cara mendapatkan kredensial:</strong>
+                            <ol className="list-decimal pl-4 mt-1 space-y-1">
+                                <li>Buat project baru di <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a>.</li>
+                                <li>Masuk ke <strong>Settings {'>'} API</strong>. Copy URL & Anon Key.</li>
+                            </ol>
+                        </div>
+                    )}
                 </div>
 
                 <button 
                     type="button"
                     onClick={handleConnect}
-                    disabled={isLoading}
-                    className="w-full mt-6 bg-indigo-600 text-white px-4 py-3 rounded-lg text-sm font-bold hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+                    disabled={isLoading || isHardcodedSb}
+                    className={`w-full mt-6 px-4 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all ${isHardcodedSb ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}
                 >
                     <RefreshCw size={18} className={isLoading ? "animate-spin" : ""}/> 
-                    {isLoading ? "Menghubungkan..." : "Simpan & Hubungkan Database"}
+                    {isHardcodedSb ? "Tersambung Otomatis" : (isLoading ? "Menghubungkan..." : "Simpan & Hubungkan Database")}
                 </button>
             </div>
         </div>

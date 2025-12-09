@@ -112,7 +112,12 @@ export const sheetService = {
     if (!sb) return { status: 'error', message: 'Supabase client not initialized' };
 
     // Convert Collection Name to Table Name (camelCase -> snake_case)
-    const tableName = toSnakeCase(collection);
+    let tableName = toSnakeCase(collection);
+
+    // FIX: Manual override for TPs because toSnakeCase converts "TPs" incorrectly to "_t_ps"
+    if (collection === 'TPs') {
+        tableName = 'tps';
+    }
     
     // Convert Data Keys to snake_case
     const dbData = op === 'delete' ? null : mapKeys(data, toSnakeCase);
