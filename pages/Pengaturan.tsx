@@ -23,7 +23,8 @@ const Pengaturan: React.FC = () => {
 
   // Cek apakah konfigurasi sudah ditanam (hardcoded atau via Env Vars)
   const isHardcodedSb = !!SUPABASE_URL && !!SUPABASE_KEY;
-  const isHardcodedAi = !!GEMINI_API_KEY;
+  // Cek apakah AI Key hardcoded DAN bukan placeholder "GANTI_..."
+  const isHardcodedAi = !!GEMINI_API_KEY && !GEMINI_API_KEY.includes("GANTI_DENGAN_API_KEY");
 
   useEffect(() => { setFormData(settings); }, [settings]);
   
@@ -36,9 +37,9 @@ const Pengaturan: React.FC = () => {
     setSbKey(storedSbKey);
 
     // AI
-    const storedAiKey = GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || '';
+    const storedAiKey = (isHardcodedAi ? GEMINI_API_KEY : localStorage.getItem('gemini_api_key')) || '';
     setAiKey(storedAiKey);
-  }, []);
+  }, [isHardcodedAi]);
 
   const handleChange = (field: keyof SchoolSettings, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -86,17 +87,16 @@ const Pengaturan: React.FC = () => {
   };
 
   const handleClearData = () => {
-      if (confirm("PERINGATAN: Ini akan menghapus koneksi database dan AI dari browser ini (kecuali jika hardcoded). Data di database tidak akan hilang. Lanjutkan?")) {
+      if (confirm("PERINGATAN: Ini akan menghapus konfigurasi lokal. Data di database aman. Lanjutkan?")) {
           localStorage.removeItem('supabase_url');
           localStorage.removeItem('supabase_key');
           localStorage.removeItem('gemini_api_key');
-          localStorage.removeItem('raporPaudData');
           
           resetSupabaseClient();
           resetAiInstance();
           
-          alert("Semua konfigurasi lokal telah dihapus.");
-          window.location.reload(); // Reload diperlukan di sini untuk reset total state aplikasi
+          alert("Konfigurasi lokal dihapus. Browser akan dimuat ulang.");
+          window.location.reload(); 
       }
   };
 
@@ -160,7 +160,6 @@ const Pengaturan: React.FC = () => {
                                 <button onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))} className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100"><Trash2 size={16}/></button>
                              )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-2">Format: PNG/JPG. Maks: 2MB. Logo akan muncul di KOP Rapor dan Sidebar.</p>
                     </div>
                 </div>
             </div>
@@ -200,11 +199,11 @@ const Pengaturan: React.FC = () => {
                 {isHardcodedSb ? (
                      <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-green-800">
                         <p className="font-bold flex items-center gap-2"><CheckCircle2 size={16}/> Terhubung ke Supabase</p>
-                        <p className="mt-1">URL dan API Key telah dikonfigurasi melalui Environment Variables atau file <code>constants.ts</code>.</p>
+                        <p className="mt-1 text-xs">Aplikasi sudah terhubung dengan database sekolah secara otomatis.</p>
                      </div>
                 ) : (
                     <div className="space-y-4">
-                        <p className="text-sm text-slate-600 mb-2">Masukkan URL dan Key dari Project Supabase Anda. Dapatkan di <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="text-blue-600 underline">Dashboard Supabase</a>.</p>
+                        <p className="text-sm text-slate-600 mb-2">Konfigurasi Database Manual:</p>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project URL</label>
                             <input className="w-full p-2 border rounded bg-slate-50 text-slate-800 text-sm font-mono" placeholder="https://xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value)} />
@@ -231,24 +230,17 @@ const Pengaturan: React.FC = () => {
                 {isHardcodedAi ? (
                      <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-green-800">
                         <p className="font-bold flex items-center gap-2"><CheckCircle2 size={16}/> Terhubung ke Gemini AI</p>
-                        <p className="mt-1">API Key telah dikonfigurasi melalui Environment Variables atau file <code>constants.ts</code>.</p>
+                        <p className="mt-1 text-xs">Fitur AI siap digunakan untuk membantu pembuatan narasi rapor.</p>
                      </div>
                 ) : (
                     <div className="space-y-4">
                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
                             <AlertCircle size={24} className="text-blue-600 shrink-0"/>
                             <div className="text-xs text-blue-800">
-                                <p className="font-bold mb-1">Tentang Kuota Error 429</p>
-                                <p>Jika muncul error "RESOURCE_EXHAUSTED", artinya kuota harian kunci gratis Anda habis. Solusinya:</p>
-                                <ul className="list-disc ml-4 mt-1">
-                                    <li>Tunggu besok untuk reset kuota.</li>
-                                    <li>Buat Akun Google baru untuk dapat Key baru.</li>
-                                    <li>Buat Key cadangan di sini dan ganti jika yang satu habis.</li>
-                                </ul>
+                                <p className="font-bold mb-1">Mode Input Manual</p>
+                                <p>Silakan masukkan API Key Gemini Anda di bawah ini jika tidak ingin mengedit kode sumber.</p>
                             </div>
                         </div>
-
-                        <p className="text-sm text-slate-600 mb-2">Masukkan API Key Google Gemini untuk mengaktifkan fitur generate deskripsi otomatis. Dapatkan di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.</p>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gemini API Key</label>
                             <div className="relative">

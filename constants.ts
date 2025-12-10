@@ -1,3 +1,4 @@
+
 import { SchoolSettings, TPType } from './types';
 
 // Helper untuk membaca Env Var dengan aman (mendukung Vite, Create-React-App, dan Vercel)
@@ -14,21 +15,23 @@ const getEnv = (key: string) => {
 // --- KONFIGURASI DATABASE ---
 
 // OPSI 1: JIKA MENGGUNAKAN VERCEL ENVIRONMENT VARIABLES (SETTINGS > ENVIRONMENT VARIABLES)
-// Masukkan Key dengan nama: REACT_APP_SUPABASE_URL dan REACT_APP_SUPABASE_KEY di Dashboard Vercel.
 const ENV_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL');
 const ENV_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY');
 
-// OPSI 2: JIKA TIDAK PAKAI ENV VARS, ISI MANUAL DI BAWAH INI (HARDCODE)
+// OPSI 2: CONFIG MANUAL (HARDCODE)
 // Ganti tanda kutip kosong "" di bawah ini dengan URL dan Key dari Supabase Anda.
 export const SUPABASE_URL = ENV_URL || "https://wohhrumqbuwhfulhrlfy.supabase.co"; 
 export const SUPABASE_KEY = ENV_KEY || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_"; 
 
 // --- KONFIGURASI AI (GEMINI) ---
-// Masukkan Key dengan nama: REACT_APP_GEMINI_API_KEY atau VITE_GEMINI_API_KEY di Dashboard Vercel.
-// SANGAT DISARANKAN BIARKAN KOSONG "" DI SINI.
-// Tujuannya agar Anda bisa memasukkan API Key milik Anda sendiri melalui menu Pengaturan di aplikasi.
-// Hal ini mencegah error "Quota Exceeded" karena menggunakan Key publik/bersama.
-export const GEMINI_API_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY') || "";
+
+// OPSI 1: ENVIRONMENT VARIABLES
+const ENV_AI_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY');
+
+// OPSI 2: CONFIG MANUAL (HARDCODE) - AGAR GURU TIDAK PERLU INPUT MANUAL
+// Masukkan API Key Google Gemini Anda di dalam tanda kutip di bawah ini.
+// Contoh: export const GEMINI_API_KEY = ENV_AI_KEY || "AIzaSyD_ContohKeyAndaDisiniXyz";
+export const GEMINI_API_KEY = ENV_AI_KEY || "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";
 
 // -------------------------------------
 
