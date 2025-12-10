@@ -35,7 +35,8 @@ const callGroqApi = async (apiKey: string, prompt: string) => {
             },
             body: JSON.stringify({
                 messages: [{ role: "user", content: prompt }],
-                model: "llama3-70b-8192", // Menggunakan Model Llama 3 yang kuat
+                // UPDATED: Menggunakan model Llama 3.3 terbaru karena versi lama sudah dihapus
+                model: "llama-3.3-70b-versatile", 
                 temperature: 0.7
             })
         });
