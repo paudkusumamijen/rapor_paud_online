@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TP_CATEGORIES } from '../constants';
-import { FileDown, Printer, Eye } from 'lucide-react';
+import { Printer, Eye } from 'lucide-react';
 import { AssessmentLevel } from '../types';
 
 const Cetak: React.FC = () => {
@@ -17,105 +17,93 @@ const Cetak: React.FC = () => {
   const studentNote = notes.find(n => String(n.studentId) === String(selectedStudentId));
   const studentAttendance = attendance.find(a => String(a.studentId) === String(selectedStudentId)) || { sick: 0, permission: 0, alpha: 0 };
 
-  const getCommonHTMLHeader = (title: string) => `
-      <!DOCTYPE html>
-      <html lang="id">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${title}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-          <style>
-              body { 
-                  font-family: 'Inter', sans-serif; 
-                  background: #ccc; 
-                  color: black; 
-                  padding: 20px;
-                  margin: 0;
-              }
-              
-              /* Sheet simulation for F4 (215.9mm x 330.2mm) */
-              .sheet {
-                  background: white;
-                  width: 215.9mm;
-                  min-height: 330.2mm;
-                  padding: 15mm 20mm;
-                  margin: 0 auto 20px auto;
-                  box-sizing: border-box;
-                  position: relative;
-                  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-              }
-
-              /* Table Styles */
-              table { border-collapse: collapse; width: 100%; font-size: 12px; }
-              th, td { border: 1px solid #000; padding: 6px; }
-              th { text-align: center; font-weight: bold; }
-              
-              .no-border-table td, .no-border-table th { border: none !important; padding: 2px 4px; }
-              
-              /* Helper classes */
-              .text-justify { text-align: justify; }
-              .font-bold { font-weight: 700; }
-              .uppercase { text-transform: uppercase; }
-              .text-center { text-align: center; }
-              .mb-4 { margin-bottom: 1rem; }
-              
-              @media print {
-                  body { background: white; padding: 0; margin: 0; }
-                  .sheet { 
-                      margin: 0; 
-                      box-shadow: none; 
-                      width: 100%; 
-                      height: auto; 
-                      min-height: auto; 
-                      page-break-after: always; 
-                  }
-                  .sheet:last-child { page-break-after: auto; }
-                  .no-print { display: none !important; }
-                  
-                  /* Ensure background colors print */
-                  -webkit-print-color-adjust: exact;
-                  print-color-adjust: exact;
-              }
-          </style>
-      </head>
-      <body>
-          <div class="no-print" style="position: fixed; top: 0; left: 0; right: 0; padding: 15px; background-color: #f0fdf4; border-bottom: 1px solid #86efac; text-align: center; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-              <p style="margin-bottom: 10px; color: #166534; font-weight: 600;">Mode Pratinjau Cetak (Ukuran F4 / Folio)</p>
-              <button onclick="window.print()" style="background-color: #0f766e; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
-                  Cetak / Simpan ke PDF
-              </button>
-          </div>
-          <div style="height: 60px;" class="no-print"></div>
-  `;
-
-  const handleDownload = () => {
+  const handlePrint = () => {
     if (!selectedStudent) { alert("Pilih siswa terlebih dahulu."); return; }
 
     const contentElement = document.getElementById('print-area-all');
     if (!contentElement) return;
 
-    const fileName = `Rapor_Lengkap_${selectedStudent.name.replace(/\s+/g, '_')}.html`;
-    const title = `Laporan Capaian - ${selectedStudent.name}`;
+    const title = `Rapor - ${selectedStudent.name}`;
+    
+    // Buka Tab Baru
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert("Pop-up diblokir. Izinkan pop-up untuk mencetak.");
+        return;
+    }
 
     const htmlContent = `
-        ${getCommonHTMLHeader(title)}
-        <div id="document-root">
+        <!DOCTYPE html>
+        <html lang="id">
+        <head>
+            <meta charset="UTF-8">
+            <title>${title}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                body { 
+                    font-family: 'Inter', sans-serif; 
+                    background: white; 
+                    color: black;
+                    margin: 0;
+                    padding: 0;
+                    -webkit-print-color-adjust: exact; 
+                    print-color-adjust: exact; 
+                }
+                
+                @page { 
+                    size: A4; 
+                    margin: 0; 
+                }
+
+                .sheet { 
+                    width: 210mm; 
+                    min-height: 297mm; 
+                    padding: 15mm 20mm; 
+                    margin: 0 auto; 
+                    position: relative; 
+                    box-sizing: border-box; 
+                    page-break-after: always;
+                    background: white;
+                }
+                
+                .sheet:last-child { 
+                    page-break-after: auto; 
+                }
+
+                /* Table Styles */
+                table { border-collapse: collapse; width: 100%; font-size: 12px; }
+                th, td { border: 1px solid #000; padding: 6px; }
+                th { text-align: center; font-weight: bold; }
+                
+                .no-border-table td, .no-border-table th { border: none !important; padding: 2px 4px; }
+                
+                /* Helper classes */
+                .text-justify { text-align: justify; }
+                .font-bold { font-weight: 700; }
+                .uppercase { text-transform: uppercase; }
+                .text-center { text-align: center; }
+                
+                /* Color utilities for print */
+                .bg-yellow-100 { background-color: #fef9c3 !important; }
+                .bg-green-100 { background-color: #dcfce7 !important; }
+                .bg-blue-100 { background-color: #dbeafe !important; }
+            </style>
+        </head>
+        <body>
             ${contentElement.innerHTML}
-        </div>
-        </body></html>
+            <script>
+                // Tunggu sebentar agar gambar/font terload, lalu print
+                setTimeout(() => {
+                    window.print();
+                }, 800);
+            </script>
+        </body>
+        </html>
     `;
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   const getScoreStyle = (score: number) => {
@@ -129,10 +117,10 @@ const Cetak: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex flex-col xl:flex-row justify-between items-center mb-6 no-print gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
         <div>
             <h1 className="text-2xl font-bold text-slate-800">Cetak Rapor</h1>
-            <p className="text-sm text-slate-500">Pilih siswa untuk melihat dan mencetak seluruh dokumen rapor.</p>
+            <p className="text-sm text-slate-500">Preview ukuran kertas A4. Klik tombol cetak untuk membuka dokumen PDF.</p>
         </div>
         
         <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
@@ -148,24 +136,25 @@ const Cetak: React.FC = () => {
             </select>
             
             <button 
-                onClick={handleDownload} 
+                onClick={handlePrint} 
                 disabled={!selectedStudentId}
                 className="bg-teal-600 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-teal-700 disabled:opacity-50 transition-colors shadow-lg font-bold"
             >
-                <Printer size={18} /> Cetak / Download PDF
+                <Printer size={18} /> Cetak / Buka PDF
             </button>
         </div>
       </div>
       
-      <div className="flex-1 bg-slate-200 overflow-auto p-4 flex justify-center rounded-xl border border-slate-300 relative shadow-inner">
+      <div className="flex-1 bg-slate-700 overflow-auto p-8 flex justify-center rounded-xl border border-slate-600 relative shadow-inner">
         {selectedStudent ? (
-            // WRAPPER FOR ALL PAGES
-            <div id="print-area-all" className="transform scale-90 md:scale-100 origin-top transition-transform">
+            // WRAPPER FOR ALL PAGES (HIDDEN VISUALLY BUT USED FOR CLONING TO PRINT WINDOW)
+            <div id="print-area-all" className="transform scale-[0.6] md:scale-[0.85] origin-top transition-transform">
                 
                 {/* ================= SHEET 1: COVER ================= */}
-                <div className="sheet flex flex-col items-center justify-center text-center">
-                     <div className="w-full h-full border-[3px] border-double border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-between">
-                        <div className="mt-10">
+                {/* A4 Size: 210mm x 297mm */}
+                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm 20mm' }}>
+                     <div className="w-full h-full border-[3px] border-double border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-between" style={{ minHeight: 'calc(297mm - 30mm)' }}>
+                        <div className="mt-10 text-center">
                             <img 
                                 src={settings.logoUrl || "https://cdn-icons-png.flaticon.com/512/2997/2997300.png"} 
                                 alt="Logo Sekolah" 
@@ -181,19 +170,19 @@ const Cetak: React.FC = () => {
                             </h2>
                         </div>
 
-                        <div className="w-full">
+                        <div className="w-full text-center">
                             <p className="text-sm font-semibold text-slate-500 uppercase mb-2 tracking-widest">Nama Peserta Didik</p>
                             <div className="border-2 border-slate-800 rounded-xl py-4 px-8 bg-slate-50 inline-block w-4/5">
                                 <h3 className="text-2xl font-bold uppercase">{selectedStudent.name}</h3>
                             </div>
                         </div>
 
-                        <div className="mb-10">
+                        <div className="mb-10 text-center">
                             <p className="text-sm font-semibold text-slate-500 uppercase mb-1 tracking-widest">NISN</p>
                             <p className="text-xl font-bold">{selectedStudent.nisn}</p>
                         </div>
 
-                        <div className="mb-10 w-full border-t-2 border-slate-200 pt-8">
+                        <div className="mb-10 w-full border-t-2 border-slate-200 pt-8 text-center">
                             <h3 className="text-xl font-bold uppercase mb-1">{settings.name}</h3>
                             <p className="text-sm font-medium text-slate-600 uppercase">
                                 KEMENTERIAN PENDIDIKAN, KEBUDAYAAN, RISET, DAN TEKNOLOGI <br/>
@@ -204,7 +193,7 @@ const Cetak: React.FC = () => {
                 </div>
 
                 {/* ================= SHEET 2: IDENTITY ================= */}
-                <div className="sheet">
+                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm 20mm' }}>
                     <div className="text-center mb-8">
                         <div className="inline-block bg-slate-900 text-white px-6 py-1.5 rounded-full mb-4 font-bold tracking-widest uppercase text-xs">
                             PAUD MERDEKA
@@ -258,7 +247,7 @@ const Cetak: React.FC = () => {
                 </div>
 
                 {/* ================= SHEET 3: RAPOR ISI ================= */}
-                <div className="sheet">
+                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm 20mm' }}>
                     <div className="text-center mb-6">
                         <h2 className="text-md font-bold uppercase leading-tight">
                             LAPORAN HASIL PERKEMBANGAN PESERTA DIDIK<br/>
@@ -376,7 +365,7 @@ const Cetak: React.FC = () => {
                     )}
 
                     {/* III. REFLEKSI & IV. CATATAN & V. KEHADIRAN */}
-                    <div className="flex gap-4 mb-4">
+                    <div className="flex gap-4 mb-4" style={{ pageBreakInside: 'avoid' }}>
                          <div className="flex-1 space-y-4">
                              {/* REFLEKSI */}
                              {studentReflections.length > 0 && (
@@ -410,7 +399,7 @@ const Cetak: React.FC = () => {
                     </div>
 
                     {/* SIGNATURES */}
-                    <div className="flex justify-between text-xs mt-8">
+                    <div className="flex justify-between text-xs mt-8" style={{ pageBreakInside: 'avoid' }}>
                         <div className="text-center w-40">
                             <p>Mengetahui,</p>
                             <p>Orang Tua/Wali,</p>
@@ -425,7 +414,7 @@ const Cetak: React.FC = () => {
                             <p>NUPTK: {studentClass?.nuptk || '-'}</p>
                         </div>
                     </div>
-                     <div className="mt-4 text-center text-xs">
+                     <div className="mt-4 text-center text-xs" style={{ pageBreakInside: 'avoid' }}>
                         <p>Mengetahui,</p>
                         <p>Kepala Sekolah</p>
                         <div className="h-16"></div>
@@ -436,7 +425,7 @@ const Cetak: React.FC = () => {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white m-4 rounded-xl border border-dashed border-slate-300">
             <Eye size={64} className="mb-4 text-slate-200"/>
-            <p className="text-lg font-medium text-slate-500">Preview Rapor</p>
+            <p className="text-lg font-medium text-slate-500">Preview Rapor (A4)</p>
             <p className="text-sm">Silakan pilih siswa di menu atas untuk melihat preview rapor.</p>
         </div>
       )}

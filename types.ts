@@ -74,6 +74,7 @@ export interface CategoryResult {
 // 1. KOKURIKULER (P5)
 export interface P5Criteria {
   id: string;
+  classId: string; // NEW: Links to ClassData (Sub dimension per class)
   subDimension: string;
   descBerkembang: string; // Deskripsi untuk nilai 1
   descCakap: string;      // Deskripsi untuk nilai 2

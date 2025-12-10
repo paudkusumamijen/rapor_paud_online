@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { AppState, ClassData, Student, LearningObjective, Assessment, CategoryResult, SchoolSettings, P5Criteria, P5Assessment, Reflection, StudentNote, AttendanceData } from '../types';
 import { INITIAL_SETTINGS } from '../constants';
@@ -124,7 +125,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           tps: (data.tps || []).map(t => ({...t, id: String(t.id), classId: String(t.classId)})),
           assessments: (data.assessments || []).map(a => ({...a, id: String(a.id), studentId: String(a.studentId), tpId: String(a.tpId)})),
           categoryResults: (data.categoryResults || []).map(a => ({...a, id: String(a.id), studentId: String(a.studentId)})),
-          p5Criteria: (data.p5Criteria || []).map(x => ({...x, id: String(x.id)})),
+          p5Criteria: (data.p5Criteria || []).map(x => ({...x, id: String(x.id), classId: String(x.classId || '')})),
           p5Assessments: (data.p5Assessments || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId), criteriaId: String(x.criteriaId)})),
           reflections: (data.reflections || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId)})),
           notes: (data.notes || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId)})),
@@ -280,7 +281,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // --- NEW FEATURES HELPERS ---
 
   const addP5Criteria = async (d: P5Criteria) => {
-    const dStr = { ...d, id: String(d.id) };
+    const dStr = { ...d, id: String(d.id), classId: String(d.classId) };
     await handleAsyncAction(
         () => sheetService.create('p5Criteria', dStr), 
         () => setState(prev => ({ ...prev, p5Criteria: [...prev.p5Criteria, dStr] })), 
@@ -288,7 +289,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
   const updateP5Criteria = async (d: P5Criteria) => {
-    const dStr = { ...d, id: String(d.id) };
+    const dStr = { ...d, id: String(d.id), classId: String(d.classId) };
     await handleAsyncAction(
         () => sheetService.update('p5Criteria', dStr), 
         () => setState(prev => ({ ...prev, p5Criteria: prev.p5Criteria.map(i => i.id === dStr.id ? dStr : i) })), 
