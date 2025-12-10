@@ -1,17 +1,30 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { AssessmentLevel, TPType } from "../types";
+import { AssessmentLevel } from "../types";
+import { GEMINI_API_KEY } from "../constants";
 
-let ai: GoogleGenAI | null = null;
+let aiInstance: GoogleGenAI | null = null;
 
-try {
-  ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-} catch (error) {
-  console.error("Failed to initialize GoogleGenAI. Check your API_KEY.", error);
-}
+// Helper to initialize AI dynamically
+const getAiInstance = (): GoogleGenAI | null => {
+  if (aiInstance) return aiInstance;
 
-// REMOVED old function generateRaporDescription as it is replaced by category summary
-// Added new function:
+  // Prioritize Env Var/Constant, then LocalStorage
+  const apiKey = GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
+
+  if (!apiKey) {
+    console.warn("Gemini API Key missing.");
+    return null;
+  }
+
+  try {
+    aiInstance = new GoogleGenAI({ apiKey });
+    return aiInstance;
+  } catch (error) {
+    console.error("Failed to initialize GoogleGenAI.", error);
+    return null;
+  }
+};
 
 export const generateCategoryDescription = async (
   studentName: string,
@@ -19,7 +32,8 @@ export const generateCategoryDescription = async (
   assessmentsData: { tp: string, activity: string, score: AssessmentLevel }[],
   teacherKeywords: string
 ): Promise<string> => {
-  if (!ai) return "Error: AI instance is not initialized. Cek API Key.";
+  const ai = getAiInstance();
+  if (!ai) return "Error: API Key belum diatur. Masuk ke menu Pengaturan > Koneksi AI.";
   
   // Format data penilaian menjadi teks untuk prompt
   const assessmentList = assessmentsData.map(a => {
@@ -71,7 +85,8 @@ export const generateP5Description = async (
   score: AssessmentLevel,
   keywords: string
 ): Promise<string> => {
-  if (!ai) return "Error: AI belum siap. Cek API Key.";
+  const ai = getAiInstance();
+  if (!ai) return "Error: API Key belum diatur. Masuk ke menu Pengaturan > Koneksi AI.";
 
   let scoreText = "";
   switch (score) {

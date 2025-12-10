@@ -20,9 +20,13 @@ const ENV_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY');
 
 // OPSI 2: JIKA TIDAK PAKAI ENV VARS, ISI MANUAL DI BAWAH INI (HARDCODE)
 // Ganti tanda kutip kosong "" di bawah ini dengan URL dan Key dari Supabase Anda.
-// Contoh: export const SUPABASE_URL = ENV_URL || "https://abcdefgh.supabase.co";
 export const SUPABASE_URL = ENV_URL || "https://wohhrumqbuwhfulhrlfy.supabase.co"; 
 export const SUPABASE_KEY = ENV_KEY || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_"; 
+
+// --- KONFIGURASI AI (GEMINI) ---
+// Masukkan Key dengan nama: REACT_APP_GEMINI_API_KEY atau VITE_GEMINI_API_KEY di Dashboard Vercel.
+// Atau biarkan kosong agar user bisa menginput manual di menu Pengaturan.
+export const GEMINI_API_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY') || "AIzaSyCYsZnQL3tUo5AWKtDkUV2V6UbkFNMxK7M";
 
 // -------------------------------------
 

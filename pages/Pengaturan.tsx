@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
-import { SUPABASE_URL, SUPABASE_KEY } from '../constants';
-import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2 } from 'lucide-react';
+import { SUPABASE_URL, SUPABASE_KEY, GEMINI_API_KEY } from '../constants';
+import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
   const { settings, setSettings, refreshData, isLoading } = useApp();
@@ -11,216 +12,241 @@ const Pengaturan: React.FC = () => {
   // States for DB Config
   const [sbUrl, setSbUrl] = useState('');
   const [sbKey, setSbKey] = useState('');
+
+  // States for AI Config
+  const [aiKey, setAiKey] = useState('');
   
   const [connStatus, setConnStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Cek apakah konfigurasi sudah ditanam (hardcoded atau via Env Vars)
   const isHardcodedSb = !!SUPABASE_URL && !!SUPABASE_KEY;
+  const isHardcodedAi = !!GEMINI_API_KEY;
 
   useEffect(() => { setFormData(settings); }, [settings]);
   
   // Load initial config from localStorage or constants
   useEffect(() => {
-    // Jika hardcoded, gunakan nilai dari constants. Jika tidak, ambil dari localStorage
+    // Database
     const storedSbUrl = SUPABASE_URL || localStorage.getItem('supabase_url') || '';
     const storedSbKey = SUPABASE_KEY || localStorage.getItem('supabase_key') || '';
-    
     setSbUrl(storedSbUrl);
     setSbKey(storedSbKey);
+
+    // AI
+    const storedAiKey = GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || '';
+    setAiKey(storedAiKey);
   }, []);
 
   const handleChange = (field: keyof SchoolSettings, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveSettings = () => {
-    setSettings(formData);
-    alert("Pengaturan sekolah berhasil disimpan.");
-  };
-
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        if (file.size > 2 * 1024 * 1024) { alert("Ukuran logo maksimal 2MB"); return; }
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            if (event.target?.result) setFormData(prev => ({ ...prev, logoUrl: event.target?.result as string }));
-        };
-        reader.readAsDataURL(file);
+      if (file.size > 2 * 1024 * 1024) { alert("Ukuran file maksimal 2MB"); return; }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+            setFormData(prev => ({ ...prev, logoUrl: event.target?.result as string }));
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleConnect = async () => {
-      setConnStatus('idle');
-      
-      if (!sbUrl || !sbKey) return alert("URL dan Key Supabase wajib diisi.");
-      
-      // Hanya simpan ke localStorage jika BUKAN mode hardcoded
-      if (!isHardcodedSb) {
-        localStorage.setItem('supabase_url', sbUrl);
-        localStorage.setItem('supabase_key', sbKey);
-      }
+  const handleSaveSettings = async () => {
+    await setSettings(formData);
+    alert("Pengaturan Sekolah berhasil disimpan!");
+  };
 
+  const handleSaveDbConfig = () => {
+      if (isHardcodedSb) return;
+      localStorage.setItem('supabase_url', sbUrl);
+      localStorage.setItem('supabase_key', sbKey);
+      alert("Konfigurasi Database disimpan! Halaman akan dimuat ulang.");
+      window.location.reload();
+  };
+
+  const handleSaveAiConfig = () => {
+      if (isHardcodedAi) return;
+      localStorage.setItem('gemini_api_key', aiKey);
+      alert("Konfigurasi AI disimpan! Halaman akan dimuat ulang.");
+      window.location.reload();
+  };
+
+  const handleClearData = () => {
+      if (confirm("PERINGATAN: Ini akan menghapus koneksi database dan AI dari browser ini (kecuali jika hardcoded). Data di database tidak akan hilang. Lanjutkan?")) {
+          localStorage.removeItem('supabase_url');
+          localStorage.removeItem('supabase_key');
+          localStorage.removeItem('gemini_api_key');
+          localStorage.removeItem('raporPaudData');
+          window.location.reload();
+      }
+  };
+
+  const testConnection = async () => {
+      setConnStatus('idle');
       try {
           await refreshData();
           setConnStatus('success');
-          alert("Koneksi Berhasil! Data tersinkronisasi.");
+          alert("Koneksi Database Berhasil!");
       } catch (e) {
           setConnStatus('error');
-          alert("Gagal terhubung. Periksa kredensial Anda.");
+          alert("Gagal terhubung ke Database.");
       }
   };
 
   return (
     <div>
-       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Pengaturan</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">Pengaturan Aplikasi</h1>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         
-        {/* --- DATABASE CONNECTION --- */}
+        {/* --- KOLOM KIRI: Identitas Sekolah --- */}
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-lg font-semibold mb-6 text-slate-800 flex items-center gap-2">
-                    <Database size={20} className="text-indigo-600"/> Koneksi Database
+                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Database size={20} className="text-indigo-600"/> Identitas Sekolah
                 </h2>
-                
-                <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 flex items-center gap-2 text-teal-700 text-sm mb-6">
-                    <Flame size={16} className="fill-teal-500 text-teal-600"/> 
-                    <strong>Mode: Supabase Database (Stabil & Cepat)</strong>
-                </div>
-
-                <div className="space-y-4 animate-in fade-in duration-300">
-                    {isHardcodedSb ? (
-                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
-                            <div className="flex items-center gap-2 text-indigo-700 font-bold mb-2">
-                                <Lock size={18}/> Terkunci (Config File / Env Vars)
-                            </div>
-                            <p className="text-xs text-indigo-600 mb-2">
-                                URL dan API Key telah ditanam di dalam kode (<code>constants.ts</code>) atau Environment Variables.
-                                Aplikasi akan otomatis terhubung di perangkat manapun.
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-green-700 font-semibold bg-green-100 p-2 rounded border border-green-200">
-                                <CheckCircle2 size={14}/> Database Siap Digunakan
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-800 mb-2">
-                            <strong>Mode Manual:</strong> Anda harus memasukkan URL & Key. Agar permanen, edit file <code>constants.ts</code>.
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="label">Project URL</label>
-                        <input className="input font-mono text-sm disabled:bg-slate-100 disabled:text-slate-500" placeholder="https://xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value)} disabled={isHardcodedSb} />
+                <div className="space-y-4">
+                    <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Satuan PAUD</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.name || ''} onChange={e => handleChange('name', e.target.value)} /></div>
+                    <div className="flex gap-4">
+                        <div className="w-1/2"><label className="block text-sm font-medium text-slate-700 mb-1">NPSN</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.npsn || ''} onChange={e => handleChange('npsn', e.target.value)} /></div>
+                        <div className="w-1/2"><label className="block text-sm font-medium text-slate-700 mb-1">Kode Pos</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.postalCode || ''} onChange={e => handleChange('postalCode', e.target.value)} /></div>
                     </div>
-                    <div>
-                        <label className="label">API Key (public/anon)</label>
-                        <input className="input font-mono text-sm disabled:bg-slate-100 disabled:text-slate-500" type="password" placeholder="eyJhbGciOiJIUz..." value={sbKey} onChange={e => setSbKey(e.target.value)} disabled={isHardcodedSb} />
+                    <div><label className="block text-sm font-medium text-slate-700 mb-1">Alamat Lengkap</label><textarea className="w-full p-2 border rounded bg-white text-slate-800" rows={2} value={formData.address || ''} onChange={e => handleChange('address', e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Desa / Kelurahan</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.village || ''} onChange={e => handleChange('village', e.target.value)} /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Kecamatan</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.district || ''} onChange={e => handleChange('district', e.target.value)} /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Kabupaten / Kota</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.regency || ''} onChange={e => handleChange('regency', e.target.value)} /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Provinsi</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.province || ''} onChange={e => handleChange('province', e.target.value)} /></div>
                     </div>
-                    
-                    {!isHardcodedSb && (
-                        <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded border border-slate-200">
-                            <strong>Cara mendapatkan kredensial:</strong>
-                            <ol className="list-decimal pl-4 mt-1 space-y-1">
-                                <li>Buat project baru di <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a>.</li>
-                                <li>Masuk ke <strong>Settings {'>'} API</strong>. Copy URL & Anon Key.</li>
-                            </ol>
-                        </div>
-                    )}
                 </div>
+            </div>
 
-                <button 
-                    type="button"
-                    onClick={handleConnect}
-                    disabled={isLoading || isHardcodedSb}
-                    className={`w-full mt-6 px-4 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all ${isHardcodedSb ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}
-                >
-                    <RefreshCw size={18} className={isLoading ? "animate-spin" : ""}/> 
-                    {isHardcodedSb ? "Tersambung Otomatis" : (isLoading ? "Menghubungkan..." : "Simpan & Hubungkan Database")}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <ImageIcon size={20} className="text-pink-600"/> Logo Sekolah
+                </h2>
+                <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-slate-50 overflow-hidden relative">
+                        {formData.logoUrl ? (
+                            <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                        ) : (
+                            <span className="text-xs text-slate-400 text-center">Belum ada logo</span>
+                        )}
+                    </div>
+                    <div className="flex-1">
+                        <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                        <div className="flex gap-2">
+                             <button onClick={() => logoInputRef.current?.click()} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2"><Upload size={16}/> Upload Logo</button>
+                             {formData.logoUrl && (
+                                <button onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))} className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100"><Trash2 size={16}/></button>
+                             )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2">Format: PNG/JPG. Maks: 2MB. Logo akan muncul di KOP Rapor dan Sidebar.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="flex justify-end">
+                <button onClick={handleSaveSettings} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-700 flex items-center gap-2 shadow-lg">
+                    <Save size={20}/> Simpan Identitas & Logo
                 </button>
             </div>
         </div>
 
-        {/* --- SCHOOL DATA FORM --- */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-lg font-semibold mb-6 text-slate-800 flex items-center gap-2">
-                <Save size={20} className="text-teal-600"/> Data Sekolah & Pengaturan Umum
-            </h2>
-
-            <div className="space-y-4">
-                 {/* Logo Upload */}
-                 <div className="flex items-center gap-4 p-4 border rounded-lg bg-slate-50 mb-4">
-                    <div className="w-16 h-16 bg-white border rounded-lg flex items-center justify-center overflow-hidden shadow-sm">
-                        {formData.logoUrl ? (
-                            <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain"/>
-                        ) : (
-                            <ImageIcon className="text-slate-300" size={32}/>
-                        )}
+        {/* --- KOLOM KANAN: Penandatangan & Koneksi --- */}
+        <div className="space-y-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 className="text-lg font-bold text-slate-800 mb-4">Penandatangan Rapor</h2>
+                <div className="space-y-4">
+                    <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Kepala Sekolah</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.headmaster || ''} onChange={e => handleChange('headmaster', e.target.value)} /></div>
+                    <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Guru Kelas (Default)</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.teacher || ''} onChange={e => handleChange('teacher', e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Semester</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.semester || ''} onChange={e => handleChange('semester', e.target.value)} /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Tahun Ajaran</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.academicYear || ''} onChange={e => handleChange('academicYear', e.target.value)} /></div>
                     </div>
-                    <div className="flex-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Logo Sekolah</label>
-                        <div className="flex gap-2">
-                            <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded hover:bg-slate-100 flex items-center gap-1"><Upload size={12}/> Upload Logo</button>
-                            {formData.logoUrl && (
-                                <button type="button" onClick={() => setFormData(p => ({...p, logoUrl: ''}))} className="text-xs bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-100 flex items-center gap-1"><Trash2 size={12}/> Hapus</button>
-                            )}
-                            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload}/>
-                        </div>
-                        <p className="text-[10px] text-slate-400 mt-1">Format: PNG/JPG, Max 2MB</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Tempat Tgl Rapor</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.reportPlace || ''} onChange={e => handleChange('reportPlace', e.target.value)} /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Tanggal Rapor</label><input type="date" className="w-full p-2 border rounded bg-white text-slate-800" value={formData.reportDate || ''} onChange={e => handleChange('reportDate', e.target.value)} /></div>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="label">Nama Sekolah</label><input className="input" value={formData.name} onChange={e => handleChange('name', e.target.value)} /></div>
-                    <div><label className="label">NPSN</label><input className="input" value={formData.npsn} onChange={e => handleChange('npsn', e.target.value)} /></div>
-                </div>
-                <div><label className="label">Alamat Lengkap</label><textarea className="input" rows={2} value={formData.address} onChange={e => handleChange('address', e.target.value)} /></div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div><label className="label">Desa / Kelurahan</label><input className="input" value={formData.village} onChange={e => handleChange('village', e.target.value)} /></div>
-                    <div><label className="label">Kecamatan</label><input className="input" value={formData.district} onChange={e => handleChange('district', e.target.value)} /></div>
-                    <div><label className="label">Kabupaten / Kota</label><input className="input" value={formData.regency} onChange={e => handleChange('regency', e.target.value)} /></div>
-                    <div><label className="label">Provinsi</label><input className="input" value={formData.province} onChange={e => handleChange('province', e.target.value)} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div><label className="label">Email</label><input className="input" value={formData.email} onChange={e => handleChange('email', e.target.value)} /></div>
-                    <div><label className="label">Website</label><input className="input" value={formData.website} onChange={e => handleChange('website', e.target.value)} /></div>
-                </div>
-                
-                <div className="border-t border-slate-100 my-4 pt-4">
-                    <h3 className="font-semibold text-slate-700 mb-3">Pejabat Penandatangan</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="label">Kepala Sekolah</label><input className="input" value={formData.headmaster} onChange={e => handleChange('headmaster', e.target.value)} /></div>
-                        <div><label className="label">Wali Kelas (Default)</label><input className="input" value={formData.teacher} onChange={e => handleChange('teacher', e.target.value)} /></div>
-                    </div>
-                </div>
-
-                <div className="border-t border-slate-100 my-4 pt-4">
-                     <h3 className="font-semibold text-slate-700 mb-3">Tahun Ajaran & Laporan</h3>
-                     <div className="grid grid-cols-2 gap-4">
-                        <div><label className="label">Tahun Ajaran</label><input className="input" value={formData.academicYear} onChange={e => handleChange('academicYear', e.target.value)} /></div>
-                        <div><label className="label">Semester</label><input className="input" value={formData.semester} onChange={e => handleChange('semester', e.target.value)} /></div>
-                        <div><label className="label">Tempat Tgl Rapor</label><input className="input" value={formData.reportPlace} onChange={e => handleChange('reportPlace', e.target.value)} /></div>
-                        <div><label className="label">Tanggal Rapor</label><input type="date" className="input" value={formData.reportDate} onChange={e => handleChange('reportDate', e.target.value)} /></div>
-                     </div>
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                    <button type="button" onClick={handleSaveSettings} className="bg-teal-600 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 hover:bg-teal-700 shadow-lg font-bold">
-                        <Save size={20}/> Simpan Pengaturan
-                    </button>
                 </div>
             </div>
-        </div>
 
+            {/* --- KONEKSI DATABASE (SUPABASE) --- */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Flame size={20} className="text-orange-500"/> Koneksi Database</h2>
+                    {isHardcodedSb && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><Lock size={10}/> Config File</span>}
+                </div>
+                
+                {isHardcodedSb ? (
+                     <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-green-800">
+                        <p className="font-bold flex items-center gap-2"><CheckCircle2 size={16}/> Terhubung ke Supabase</p>
+                        <p className="mt-1">URL dan API Key telah dikonfigurasi melalui Environment Variables atau file <code>constants.ts</code>.</p>
+                     </div>
+                ) : (
+                    <div className="space-y-4">
+                        <p className="text-sm text-slate-600 mb-2">Masukkan URL dan Key dari Project Supabase Anda. Dapatkan di <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="text-blue-600 underline">Dashboard Supabase</a>.</p>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project URL</label>
+                            <input className="w-full p-2 border rounded bg-slate-50 text-slate-800 text-sm font-mono" placeholder="https://xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Anon / Public Key</label>
+                            <input className="w-full p-2 border rounded bg-slate-50 text-slate-800 text-sm font-mono" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI..." value={sbKey} onChange={e => setSbKey(e.target.value)} />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                             <button onClick={handleSaveDbConfig} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 flex-1">Simpan Koneksi DB</button>
+                             <button onClick={testConnection} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 flex items-center gap-2"><RefreshCw size={14} className={isLoading ? 'animate-spin' : ''}/> Tes</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* --- KONEKSI AI (GEMINI) --- */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Sparkles size={20} className="text-purple-500"/> Koneksi AI (Google Gemini)</h2>
+                    {isHardcodedAi && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><Lock size={10}/> Config File</span>}
+                </div>
+
+                {isHardcodedAi ? (
+                     <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-green-800">
+                        <p className="font-bold flex items-center gap-2"><CheckCircle2 size={16}/> Terhubung ke Gemini AI</p>
+                        <p className="mt-1">API Key telah dikonfigurasi melalui Environment Variables atau file <code>constants.ts</code>.</p>
+                     </div>
+                ) : (
+                    <div className="space-y-4">
+                        <p className="text-sm text-slate-600 mb-2">Masukkan API Key Google Gemini untuk mengaktifkan fitur generate deskripsi otomatis. Dapatkan di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.</p>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gemini API Key</label>
+                            <div className="relative">
+                                <Key size={14} className="absolute left-3 top-3 text-slate-400"/>
+                                <input 
+                                    className="w-full p-2 pl-9 border rounded bg-slate-50 text-slate-800 text-sm font-mono" 
+                                    placeholder="AIzaSy..." 
+                                    value={aiKey} 
+                                    onChange={e => setAiKey(e.target.value)} 
+                                    type="password"
+                                />
+                            </div>
+                        </div>
+                        <div className="pt-2">
+                             <button onClick={handleSaveAiConfig} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700">Simpan API Key</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="pt-4 border-t">
+                 <button onClick={handleClearData} className="text-red-600 text-sm font-medium hover:text-red-800 flex items-center gap-2"><Trash2 size={16}/> Reset Semua Konfigurasi Lokal</button>
+            </div>
+        </div>
       </div>
-      <style>{`
-        .label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
-        .input { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background-color: white; color: #1f2937; font-size: 0.875rem; }
-        .input:focus { outline: 2px solid #0d9488; outline-offset: -1px; }
-      `}</style>
     </div>
   );
 };
