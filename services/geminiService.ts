@@ -4,26 +4,43 @@ import { AssessmentLevel } from "../types";
 import { GEMINI_API_KEY } from "../constants";
 
 let aiInstance: GoogleGenAI | null = null;
+let currentKey: string | null = null;
 
 // Helper to initialize AI dynamically
 const getAiInstance = (): GoogleGenAI | null => {
-  if (aiInstance) return aiInstance;
-
   // Prioritize Env Var/Constant, then LocalStorage
   const apiKey = GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
 
   if (!apiKey) {
-    console.warn("Gemini API Key missing.");
     return null;
   }
 
-  try {
-    aiInstance = new GoogleGenAI({ apiKey });
-    return aiInstance;
-  } catch (error) {
-    console.error("Failed to initialize GoogleGenAI.", error);
-    return null;
+  // Re-initialize if key changes or instance is null
+  if (!aiInstance || currentKey !== apiKey) {
+      try {
+        aiInstance = new GoogleGenAI({ apiKey });
+        currentKey = apiKey;
+      } catch (error) {
+        console.error("Failed to initialize GoogleGenAI.", error);
+        return null;
+      }
   }
+
+  return aiInstance;
+};
+
+const handleGeminiError = (error: any): string => {
+    const errMsg = error.message || JSON.stringify(error);
+    
+    if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+        return "⚠️ KUOTA HABIS: Batas penggunaan AI harian tercapai. Silakan tunggu beberapa saat, gunakan API Key cadangan di Pengaturan, atau coba lagi besok.";
+    }
+    
+    if (errMsg.includes("API Key")) {
+        return "⚠️ API Key Salah/Tidak Valid. Periksa kembali di menu Pengaturan.";
+    }
+
+    return `Gagal generate: ${errMsg.substring(0, 100)}...`;
 };
 
 export const generateCategoryDescription = async (
@@ -75,7 +92,7 @@ export const generateCategoryDescription = async (
     });
     return response.text?.trim() || "Gagal menghasilkan deskripsi.";
   } catch (error) {
-    return `Error AI: ${(error as Error).message}`;
+    return handleGeminiError(error);
   }
 };
 
@@ -116,6 +133,6 @@ export const generateP5Description = async (
     });
     return response.text?.trim() || "Gagal menghasilkan deskripsi.";
   } catch (error) {
-    return `Error: ${(error as Error).message}`;
+    return handleGeminiError(error);
   }
 };

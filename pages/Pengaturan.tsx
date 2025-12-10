@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
 import { SUPABASE_URL, SUPABASE_KEY, GEMINI_API_KEY } from '../constants';
-import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key } from 'lucide-react';
+import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
   const { settings, setSettings, refreshData, isLoading } = useApp();
@@ -221,6 +221,19 @@ const Pengaturan: React.FC = () => {
                      </div>
                 ) : (
                     <div className="space-y-4">
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
+                            <AlertCircle size={24} className="text-blue-600 shrink-0"/>
+                            <div className="text-xs text-blue-800">
+                                <p className="font-bold mb-1">Tentang Kuota Error 429</p>
+                                <p>Jika muncul error "RESOURCE_EXHAUSTED", artinya kuota harian kunci gratis Anda habis. Solusinya:</p>
+                                <ul className="list-disc ml-4 mt-1">
+                                    <li>Tunggu besok untuk reset kuota.</li>
+                                    <li>Buat Akun Google baru untuk dapat Key baru.</li>
+                                    <li>Buat Key cadangan di sini dan ganti jika yang satu habis.</li>
+                                </ul>
+                            </div>
+                        </div>
+
                         <p className="text-sm text-slate-600 mb-2">Masukkan API Key Google Gemini untuk mengaktifkan fitur generate deskripsi otomatis. Dapatkan di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.</p>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gemini API Key</label>
