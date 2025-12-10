@@ -1,45 +1,42 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
-import { SUPABASE_URL, SUPABASE_KEY, GEMINI_API_KEY } from '../constants';
-import { resetAiInstance } from '../services/geminiService';
+import { SUPABASE_URL, SUPABASE_KEY } from '../constants';
 import { resetSupabaseClient } from '../services/sheetService';
-import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle } from 'lucide-react';
+import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle, Cpu, ShieldCheck, Edit } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
   const { settings, setSettings, refreshData, isLoading } = useApp();
   const [formData, setFormData] = useState<SchoolSettings>(settings);
   
-  // States for DB Config
+  // States for DB Config (Supabase URL/Key must still be handled locally/env as they are needed to connect)
   const [sbUrl, setSbUrl] = useState('');
   const [sbKey, setSbKey] = useState('');
 
-  // States for AI Config
-  const [aiKey, setAiKey] = useState('');
-  
   const [connStatus, setConnStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Cek apakah konfigurasi sudah ditanam (hardcoded atau via Env Vars)
+  // Cek apakah konfigurasi Supabase sudah ditanam (via Env Vars)
   const isHardcodedSb = !!SUPABASE_URL && !!SUPABASE_KEY;
-  // Cek apakah AI Key hardcoded DAN bukan placeholder "GANTI_..."
-  const isHardcodedAi = !!GEMINI_API_KEY && !GEMINI_API_KEY.includes("GANTI_DENGAN_API_KEY");
+  // Cek apakah Database sudah terkonfigurasi (baik hardcode maupun localstorage)
+  const isDbConfigured = isHardcodedSb || (!!sbUrl && !!sbKey);
+
+  // Cek apakah AI sudah disetting
+  const isAiConfigured = !!settings.aiApiKey;
+  // Mode edit untuk AI (jika user ingin mengubah key yang sudah ada)
+  const [isEditingAi, setIsEditingAi] = useState(false);
 
   useEffect(() => { setFormData(settings); }, [settings]);
   
-  // Load initial config from localStorage or constants
+  // Load Supabase config from localStorage or constants
   useEffect(() => {
-    // Database
     const storedSbUrl = SUPABASE_URL || localStorage.getItem('supabase_url') || '';
     const storedSbKey = SUPABASE_KEY || localStorage.getItem('supabase_key') || '';
     setSbUrl(storedSbUrl);
     setSbKey(storedSbKey);
-
-    // AI
-    const storedAiKey = (isHardcodedAi ? GEMINI_API_KEY : localStorage.getItem('gemini_api_key')) || '';
-    setAiKey(storedAiKey);
-  }, [isHardcodedAi]);
+  }, []);
 
   const handleChange = (field: keyof SchoolSettings, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -61,7 +58,8 @@ const Pengaturan: React.FC = () => {
 
   const handleSaveSettings = async () => {
     await setSettings(formData);
-    alert("Pengaturan Sekolah berhasil disimpan!");
+    setIsEditingAi(false); // Keluar dari mode edit setelah simpan
+    alert("Semua Pengaturan berhasil disimpan ke Database!");
   };
 
   const handleSaveDbConfig = async () => {
@@ -76,24 +74,12 @@ const Pengaturan: React.FC = () => {
       await testConnection();
   };
 
-  const handleSaveAiConfig = () => {
-      if (isHardcodedAi) return;
-      localStorage.setItem('gemini_api_key', aiKey);
-      
-      // Reset instance AI agar menggunakan key baru
-      resetAiInstance();
-      
-      alert("Konfigurasi AI disimpan! Anda bisa langsung mencobanya di menu Input Nilai.");
-  };
-
   const handleClearData = () => {
-      if (confirm("PERINGATAN: Ini akan menghapus konfigurasi lokal. Data di database aman. Lanjutkan?")) {
+      if (confirm("PERINGATAN: Ini akan menghapus koneksi database dari browser ini. Anda harus memasukkan URL & Key lagi nanti. Lanjutkan?")) {
           localStorage.removeItem('supabase_url');
           localStorage.removeItem('supabase_key');
-          localStorage.removeItem('gemini_api_key');
           
           resetSupabaseClient();
-          resetAiInstance();
           
           alert("Konfigurasi lokal dihapus. Browser akan dimuat ulang.");
           window.location.reload(); 
@@ -166,7 +152,7 @@ const Pengaturan: React.FC = () => {
             
             <div className="flex justify-end">
                 <button onClick={handleSaveSettings} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-700 flex items-center gap-2 shadow-lg">
-                    <Save size={20}/> Simpan Identitas & Logo
+                    <Save size={20}/> Simpan Data Sekolah
                 </button>
             </div>
         </div>
@@ -189,6 +175,94 @@ const Pengaturan: React.FC = () => {
                 </div>
             </div>
 
+            {/* --- KONEKSI AI (DATABASE STORED) --- */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10"><Cpu size={100} /></div>
+                
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <Sparkles size={20} className="text-purple-500"/> Konfigurasi AI
+                </h2>
+                
+                <div className="relative z-10">
+                    {/* TAMPILAN SUKSES / TERSEMBUNYI */}
+                    {isAiConfigured && !isEditingAi ? (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-5 animate-in fade-in zoom-in-95 duration-300">
+                             <div className="flex items-center justify-between mb-2">
+                                 <div className="flex items-center gap-3">
+                                     <div className="bg-green-100 p-2 rounded-full text-green-600">
+                                         <ShieldCheck size={24} />
+                                     </div>
+                                     <div>
+                                         <h3 className="font-bold text-green-800 text-lg">AI Siap Digunakan</h3>
+                                         <p className="text-xs text-green-700 font-medium">
+                                             Penyedia: <span className="uppercase">{formData.aiProvider === 'gemini' ? 'Google Gemini' : 'Groq AI'}</span>
+                                         </p>
+                                     </div>
+                                 </div>
+                                 <button 
+                                    onClick={() => setIsEditingAi(true)}
+                                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                                    title="Ubah Konfigurasi"
+                                 >
+                                     <Edit size={18} />
+                                 </button>
+                             </div>
+                             <p className="text-xs text-green-600 ml-12">
+                                 API Key tersimpan aman di database. Anda bisa langsung menggunakan fitur AI di menu Input Nilai.
+                             </p>
+                        </div>
+                    ) : (
+                        /* TAMPILAN EDIT / INPUT */
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                            {isEditingAi && (
+                                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-xs text-yellow-800 mb-2 flex items-center justify-between">
+                                    <span className="flex items-center gap-2"><AlertCircle size={14}/> Mode Edit Konfigurasi AI</span>
+                                    <button onClick={() => setIsEditingAi(false)} className="text-slate-500 underline hover:text-slate-700">Batal</button>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Pilih Penyedia AI</label>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setFormData(prev => ({...prev, aiProvider: 'groq'}))}
+                                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-bold flex items-center justify-center gap-2 transition-all ${formData.aiProvider === 'groq' ? 'bg-orange-600 text-white border-orange-600 shadow-md' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        <Flame size={16}/> Groq (Gratis)
+                                    </button>
+                                    <button 
+                                        onClick={() => setFormData(prev => ({...prev, aiProvider: 'gemini'}))}
+                                        className={`flex-1 py-2 px-3 rounded-lg border text-sm font-bold flex items-center justify-center gap-2 transition-all ${formData.aiProvider === 'gemini' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        <Sparkles size={16}/> Google Gemini
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                    API Key {formData.aiProvider === 'groq' ? '(Dimulai dengan gsk_...)' : '(Dimulai dengan AIza...)'}
+                                </label>
+                                <div className="relative">
+                                    <Key size={14} className="absolute left-3 top-3 text-slate-400"/>
+                                    <input 
+                                        className="w-full p-2 pl-9 border rounded bg-white text-slate-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                        placeholder={formData.aiProvider === 'groq' ? "gsk_..." : "AIzaSy..."}
+                                        value={formData.aiApiKey || ''} 
+                                        onChange={e => handleChange('aiApiKey', e.target.value)} 
+                                        type="password"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <button onClick={handleSaveSettings} className="w-full bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 shadow-md">Simpan Konfigurasi AI</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* --- KONEKSI DATABASE (SUPABASE) --- */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex justify-between items-start mb-4">
@@ -196,14 +270,37 @@ const Pengaturan: React.FC = () => {
                     {isHardcodedSb && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><Lock size={10}/> Config File</span>}
                 </div>
                 
-                {isHardcodedSb ? (
-                     <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-green-800">
-                        <p className="font-bold flex items-center gap-2"><CheckCircle2 size={16}/> Terhubung ke Supabase</p>
-                        <p className="mt-1 text-xs">Aplikasi sudah terhubung dengan database sekolah secara otomatis.</p>
+                {isDbConfigured ? (
+                     // TAMPILAN SUKSES DATABASE
+                     <div className="bg-green-50 p-5 rounded-xl border border-green-200 text-green-800 flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                             <div className="bg-green-100 p-2 rounded-full text-green-600">
+                                 <CheckCircle2 size={24} />
+                             </div>
+                             <div>
+                                 <h3 className="font-bold text-lg">Database Terhubung</h3>
+                                 <p className="text-xs text-green-700">Status: Online</p>
+                             </div>
+                        </div>
+                        
+                        {!isHardcodedSb && (
+                            <div className="mt-2 border-t border-green-200 pt-3 flex justify-between items-center">
+                                <span className="text-xs text-green-600">Ingin mengganti database?</span>
+                                <button 
+                                    onClick={handleClearData}
+                                    className="text-xs bg-white border border-green-300 px-3 py-1.5 rounded-lg font-bold text-green-700 hover:bg-green-50 shadow-sm"
+                                >
+                                    Putuskan / Ganti
+                                </button>
+                            </div>
+                        )}
                      </div>
                 ) : (
+                    // TAMPILAN INPUT DATABASE
                     <div className="space-y-4">
-                        <p className="text-sm text-slate-600 mb-2">Konfigurasi Database Manual:</p>
+                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-xs text-yellow-800">
+                             <p><strong>Catatan:</strong> URL & Key Database ini disimpan di Browser Anda agar bisa terhubung. Jangan bagikan ke orang lain.</p>
+                        </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project URL</label>
                             <input className="w-full p-2 border rounded bg-slate-50 text-slate-800 text-sm font-mono" placeholder="https://xyz.supabase.co" value={sbUrl} onChange={e => setSbUrl(e.target.value)} />
@@ -218,51 +315,6 @@ const Pengaturan: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </div>
-
-            {/* --- KONEKSI AI (GEMINI) --- */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Sparkles size={20} className="text-purple-500"/> Koneksi AI (Google Gemini)</h2>
-                    {isHardcodedAi && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><Lock size={10}/> Config File</span>}
-                </div>
-
-                {isHardcodedAi ? (
-                     <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-green-800">
-                        <p className="font-bold flex items-center gap-2"><CheckCircle2 size={16}/> Terhubung ke Gemini AI</p>
-                        <p className="mt-1 text-xs">Fitur AI siap digunakan untuk membantu pembuatan narasi rapor.</p>
-                     </div>
-                ) : (
-                    <div className="space-y-4">
-                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
-                            <AlertCircle size={24} className="text-blue-600 shrink-0"/>
-                            <div className="text-xs text-blue-800">
-                                <p className="font-bold mb-1">Mode Input Manual</p>
-                                <p>Silakan masukkan API Key Gemini Anda di bawah ini jika tidak ingin mengedit kode sumber.</p>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gemini API Key</label>
-                            <div className="relative">
-                                <Key size={14} className="absolute left-3 top-3 text-slate-400"/>
-                                <input 
-                                    className="w-full p-2 pl-9 border rounded bg-slate-50 text-slate-800 text-sm font-mono" 
-                                    placeholder="AIzaSy..." 
-                                    value={aiKey} 
-                                    onChange={e => setAiKey(e.target.value)} 
-                                    type="password"
-                                />
-                            </div>
-                        </div>
-                        <div className="pt-2">
-                             <button onClick={handleSaveAiConfig} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700">Simpan API Key</button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="pt-4 border-t">
-                 <button onClick={handleClearData} className="text-red-600 text-sm font-medium hover:text-red-800 flex items-center gap-2"><Trash2 size={16}/> Reset Semua Konfigurasi Lokal</button>
             </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 
+
 import { SchoolSettings, TPType } from './types';
 
 // Helper untuk membaca Env Var dengan aman (mendukung Vite, Create-React-App, dan Vercel)
@@ -12,25 +13,15 @@ const getEnv = (key: string) => {
   return "";
 };
 
-// --- KONFIGURASI DATABASE ---
-
-// OPSI 1: JIKA MENGGUNAKAN VERCEL ENVIRONMENT VARIABLES (SETTINGS > ENVIRONMENT VARIABLES)
-const ENV_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL');
-const ENV_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY');
-
-// OPSI 2: CONFIG MANUAL (HARDCODE)
-// Ganti tanda kutip kosong "" di bawah ini dengan URL dan Key dari Supabase Anda.
-export const SUPABASE_URL = ENV_URL || "https://wohhrumqbuwhfulhrlfy.supabase.co"; 
-export const SUPABASE_KEY = ENV_KEY || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_"; 
+// --- KONFIGURASI DATABASE (SUPABASE) ---
+// Supabase URL & Key TIDAK BISA disimpan di dalam database itu sendiri (karena butuh kunci untuk membuka database).
+// Jadi ini tetap harus menggunakan Environment Variable atau diisi manual saat build.
+export const SUPABASE_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL') || "";
+export const SUPABASE_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY') || "";
 
 // --- KONFIGURASI AI (GEMINI / GROQ) ---
-
-// OPSI 1: ENVIRONMENT VARIABLES
-const ENV_AI_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY');
-
-// OPSI 2: CONFIG MANUAL (HARDCODE) - AGAR GURU TIDAK PERLU INPUT MANUAL
-// Masukkan API Key (Bisa Google Gemini 'AIza...' atau Groq 'gsk_...')
-export const GEMINI_API_KEY = ENV_AI_KEY || "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";
+// Kunci AI sekarang disimpan di DATABASE (Tabel Settings), jadi di sini kita kosongkan.
+export const GEMINI_API_KEY = ""; 
 
 // -------------------------------------
 
@@ -52,7 +43,9 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   academicYear: "2024/2025",
   reportPlace: "Jakarta",
   reportDate: new Date().toISOString().split('T')[0],
-  logoUrl: ""
+  logoUrl: "",
+  aiProvider: 'groq',
+  aiApiKey: ""
 };
 
 export const TP_CATEGORIES = [TPType.ABP, TPType.JD, TPType.IMTAK];

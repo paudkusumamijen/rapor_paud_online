@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { AssessmentLevel, TPType } from '../types';
@@ -79,11 +80,14 @@ const InputNilai: React.FC = () => {
 
     setIsGenerating(true);
     try {
+        // UPDATED: Pass API Key and Provider from Settings
         const result = await generateCategoryDescription(
             selectedStudent.name,
             activeCategory,
             assessmentsPayload,
-            teacherKeywords
+            teacherKeywords,
+            settings.aiApiKey || "",
+            settings.aiProvider || 'groq'
         );
         setFinalDescription(result);
     } catch (e) {
@@ -91,6 +95,30 @@ const InputNilai: React.FC = () => {
     } finally {
         setIsGenerating(false);
     }
+  };
+
+  const handleGenerateTemplate = () => {
+    if (!selectedStudent) return;
+    
+    // Kumpulkan data TP yang sudah dinilai
+    const assessmentsPayload = categoryTps
+        .filter(tp => tempScores[tp.id]) 
+        .map(tp => ({
+            tp: tp.description,
+            activity: tp.activity,
+            score: tempScores[tp.id]
+        }));
+
+    if (assessmentsPayload.length === 0) {
+        alert("Mohon isi nilai TP pada tabel di atas terlebih dahulu.");
+        return;
+    }
+
+    // Panggil Service Manual (Offline) dengan API Key kosong agar masuk mode offline
+    import('../services/geminiService').then(module => {
+        const result = module.generateTemplateDescription(selectedStudent.name, activeCategory, assessmentsPayload);
+        setFinalDescription(result);
+    });
   };
 
   const handleSaveAll = async () => {
@@ -225,7 +253,7 @@ const InputNilai: React.FC = () => {
 
                         {/* 2. GENERATOR AI & DESKRIPSI */}
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Sparkles size={18} className="text-indigo-600"/> Generate Deskripsi Guru</h3>
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Sparkles size={18} className="text-indigo-600"/> Generate Deskripsi</h3>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -236,14 +264,27 @@ const InputNilai: React.FC = () => {
                                         value={teacherKeywords}
                                         onChange={e => setTeacherKeywords(e.target.value)}
                                     />
-                                    <button 
-                                        onClick={handleGenerateAI}
-                                        disabled={isGenerating}
-                                        className="mt-3 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex justify-center items-center gap-2"
-                                    >
-                                        {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Sparkles size={16}/>}
-                                        {isGenerating ? "Sedang Menyusun..." : "Buat Deskripsi Otomatis"}
-                                    </button>
+                                    <div className="mt-3 flex gap-2 flex-col lg:flex-row">
+                                        <button 
+                                            onClick={handleGenerateAI}
+                                            disabled={isGenerating}
+                                            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex justify-center items-center gap-2 text-sm"
+                                        >
+                                            {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Sparkles size={16}/>}
+                                            {isGenerating ? "Menyusun..." : `Gunakan AI (${settings.aiProvider === 'gemini' ? 'Google' : 'Groq'})`}
+                                        </button>
+                                        <button 
+                                            onClick={handleGenerateTemplate}
+                                            className="flex-1 bg-white border border-slate-300 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-50 flex justify-center items-center gap-2 text-sm"
+                                        >
+                                            Gunakan Template (Offline)
+                                        </button>
+                                    </div>
+                                    {!settings.aiApiKey && (
+                                        <p className="text-xs text-orange-600 mt-2 text-center">
+                                            *API Key belum disetting. Tombol AI mungkin tidak berfungsi, silakan gunakan Template Offline atau atur Key di Pengaturan.
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Rapor (Hasil AI)</label>

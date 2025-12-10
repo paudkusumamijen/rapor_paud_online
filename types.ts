@@ -133,6 +133,9 @@ export interface SchoolSettings {
   reportDate: string;
   reportPlace: string;
   logoUrl?: string;
+  // AI CONFIGURATION (STORED IN DB)
+  aiProvider?: 'gemini' | 'groq';
+  aiApiKey?: string;
 }
 
 export interface AppState {

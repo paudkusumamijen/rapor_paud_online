@@ -1,7 +1,7 @@
 
+
 import { GoogleGenAI } from "@google/genai";
 import { AssessmentLevel } from "../types";
-import { GEMINI_API_KEY } from "../constants";
 
 let aiInstance: GoogleGenAI | null = null;
 let currentKey: string | null = null;
@@ -11,18 +11,6 @@ export const resetAiInstance = () => {
     aiInstance = null;
     currentKey = null;
 };
-
-// Helper untuk mendapatkan API Key
-const getApiKey = (): string => {
-  let apiKey = GEMINI_API_KEY;
-  if (!apiKey || apiKey.includes("GANTI_DENGAN_API_KEY")) {
-      apiKey = localStorage.getItem('gemini_api_key') || "";
-  }
-  return apiKey;
-};
-
-// Helper untuk cek apakah key adalah Groq (dimulai dengan gsk_)
-const isGroqKey = (key: string) => key.startsWith('gsk_');
 
 // === GROQ API HANDLER ===
 const callGroqApi = async (apiKey: string, prompt: string) => {
@@ -35,7 +23,7 @@ const callGroqApi = async (apiKey: string, prompt: string) => {
             },
             body: JSON.stringify({
                 messages: [{ role: "user", content: prompt }],
-                // UPDATED: Menggunakan model Llama 3.3 terbaru karena versi lama sudah dihapus
+                // UPDATED: Menggunakan model Llama 3.3 terbaru
                 model: "llama-3.3-70b-versatile", 
                 temperature: 0.7
             })
@@ -74,8 +62,8 @@ const handleApiError = (error: any): string => {
         return "⚠️ KUOTA HABIS: Batas penggunaan AI harian tercapai. Silakan coba lagi besok atau gunakan Template Offline.";
     }
     
-    if (errMsg.includes("API Key") || errMsg.includes("authentication")) {
-        return "⚠️ API Key Salah/Tidak Valid. Periksa file constants.ts atau menu Pengaturan.";
+    if (errMsg.includes("API Key") || errMsg.includes("authentication") || errMsg.includes("invalid_api_key")) {
+        return "⚠️ API Key Salah/Tidak Valid. Mohon periksa kembali API Key di menu Pengaturan.";
     }
 
     return `Gagal generate: ${errMsg.substring(0, 100)}...`;
@@ -115,13 +103,14 @@ export const generateCategoryDescription = async (
   studentName: string,
   category: string,
   assessmentsData: { tp: string, activity: string, score: AssessmentLevel }[],
-  teacherKeywords: string
+  teacherKeywords: string,
+  apiKey: string,
+  provider: 'gemini' | 'groq' = 'groq'
 ): Promise<string> => {
-  const apiKey = getApiKey();
   
   // Fallback ke Template Manual jika AI Key tidak ada
   if (!apiKey) {
-      console.warn("AI Key not found, using offline template.");
+      console.warn("AI Key not found in DB Settings, using offline template.");
       return generateTemplateDescription(studentName, category, assessmentsData);
   }
   
@@ -158,7 +147,7 @@ export const generateCategoryDescription = async (
   `;
 
   try {
-    if (isGroqKey(apiKey)) {
+    if (provider === 'groq') {
         // --- USE GROQ API ---
         return await callGroqApi(apiKey, prompt);
     } else {
@@ -180,9 +169,10 @@ export const generateP5Description = async (
   studentName: string,
   subDimension: string,
   score: AssessmentLevel,
-  keywords: string
+  keywords: string,
+  apiKey: string,
+  provider: 'gemini' | 'groq' = 'groq'
 ): Promise<string> => {
-  const apiKey = getApiKey();
   
   if (!apiKey) {
      return `Ananda ${studentName} menunjukkan perkembangan dalam ${subDimension}. ${keywords}`;
@@ -210,7 +200,7 @@ export const generateP5Description = async (
   `;
 
   try {
-    if (isGroqKey(apiKey)) {
+    if (provider === 'groq') {
         // --- USE GROQ API ---
         return await callGroqApi(apiKey, prompt);
     } else {

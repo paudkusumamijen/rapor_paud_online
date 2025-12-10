@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { P5Criteria, AssessmentLevel } from '../types';
@@ -8,7 +9,7 @@ import { LEVEL_LABELS } from '../constants';
 
 const Kokurikuler: React.FC = () => {
   const { p5Criteria, addP5Criteria, updateP5Criteria, deleteP5Criteria, 
-          students, classes, p5Assessments, upsertP5Assessment, confirmAction } = useApp();
+          students, classes, p5Assessments, upsertP5Assessment, confirmAction, settings } = useApp();
   
   const [activeTab, setActiveTab] = useState<'assessment' | 'criteria'>('assessment');
   
@@ -70,9 +71,24 @@ const Kokurikuler: React.FC = () => {
       if (!teacherNote) { alert("Mohon isi 'Kata Kunci Kegiatan' terlebih dahulu agar AI bisa membuat deskripsi yang sesuai."); return; }
       setIsGenerating(true);
       try {
-          const res = await generateP5Description(selectedStudent.name, subDimension, currentScore, teacherNote);
+          // UPDATED: Pass API Key and Provider from Settings
+          const res = await generateP5Description(
+              selectedStudent.name, 
+              subDimension, 
+              currentScore, 
+              teacherNote,
+              settings.aiApiKey || "",
+              settings.aiProvider || 'groq'
+          );
           if (res.startsWith("Error")) { alert(res); } else { setDescription(res); }
       } catch (e) { alert("Gagal menghubungi AI. Periksa koneksi internet."); } finally { setIsGenerating(false); }
+  };
+
+  const handleGenerateTemplate = (subDimension: string) => {
+      if (!selectedStudent) return;
+      // Using empty key forces offline template mode in service (if implemented for P5, otherwise basic template)
+      const res = `Ananda ${selectedStudent.name} ${currentScore === 3 ? 'sangat berkembang' : currentScore === 2 ? 'berkembang sesuai harapan' : 'mulai berkembang'} dalam ${subDimension}. ${teacherNote}`;
+      setDescription(res);
   };
 
   const handleSaveAssessment = () => {
@@ -183,7 +199,12 @@ const Kokurikuler: React.FC = () => {
                                     <div className="space-y-6">
                                         <div><label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">1. Pilih Tingkat Pencapaian</label><div className="flex flex-col sm:flex-row gap-3">{[AssessmentLevel.BERKEMBANG, AssessmentLevel.CAKAP, AssessmentLevel.MAHIR].map(val => (<button type="button" key={val} onClick={() => setCurrentScore(val)} className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-bold transition-all ${currentScore === val ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-inner' : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-300'}`}>{LEVEL_LABELS[val]}</button>))}</div></div>
                                         <div><label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">2. Kata Kunci Kegiatan / Perilaku</label><input className="w-full p-3 border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: mau berbagi mainan..." value={teacherNote} onChange={e => setTeacherNote(e.target.value)} /><p className="text-xs text-slate-500 mt-1">*Wajib diisi agar AI dapat membuat narasi yang akurat.</p></div>
-                                        <div><label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">3. Buat Deskripsi Otomatis</label><button type="button" onClick={() => handleGenerateAI(c.subDimension)} disabled={!teacherNote || isGenerating} className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 font-bold text-white shadow-md transition-all ${!teacherNote ? 'bg-slate-300 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'}`}>{isGenerating ? <Loader2 size={18} className="animate-spin"/> : <Sparkles size={18}/>} {isGenerating ? 'Sedang Menyusun Kalimat...' : 'Generate Deskripsi dengan AI'}</button></div>
+                                        <div><label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">3. Buat Deskripsi Otomatis</label>
+                                            <div className="flex gap-2">
+                                                <button type="button" onClick={() => handleGenerateAI(c.subDimension)} disabled={!teacherNote || isGenerating} className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 font-bold text-white shadow-md transition-all ${!teacherNote ? 'bg-slate-300 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'}`}>{isGenerating ? <Loader2 size={18} className="animate-spin"/> : <Sparkles size={18}/>} {isGenerating ? 'Menyusun...' : 'Generate AI'}</button>
+                                                <button type="button" onClick={() => handleGenerateTemplate(c.subDimension)} className="px-4 py-3 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 text-sm">Offline</button>
+                                            </div>
+                                        </div>
                                         <div><label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">4. Hasil Deskripsi (Bisa Diedit)</label><textarea className="w-full p-3 border border-slate-300 rounded-lg bg-white text-slate-800 h-32 leading-relaxed focus:ring-2 focus:ring-teal-500 outline-none" value={description} onChange={e => setDescription(e.target.value)} placeholder="Hasil narasi dari AI akan muncul di sini..." /></div>
                                         <div className="flex justify-end pt-4 border-t border-slate-100"><button type="button" onClick={handleSaveAssessment} className="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 shadow-lg flex items-center gap-2 transform active:scale-95 transition-all"><Save size={18}/> Simpan Penilaian</button></div>
                                     </div>
