@@ -25,8 +25,10 @@ export const SUPABASE_KEY = ENV_KEY || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_Jo
 
 // --- KONFIGURASI AI (GEMINI) ---
 // Masukkan Key dengan nama: REACT_APP_GEMINI_API_KEY atau VITE_GEMINI_API_KEY di Dashboard Vercel.
-// Atau biarkan kosong agar user bisa menginput manual di menu Pengaturan.
-export const GEMINI_API_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY') || "AIzaSyBYpqlIZysrUv_yyIhQIDJu0Ps0VmtVvBY";
+// SANGAT DISARANKAN BIARKAN KOSONG "" DI SINI.
+// Tujuannya agar Anda bisa memasukkan API Key milik Anda sendiri melalui menu Pengaturan di aplikasi.
+// Hal ini mencegah error "Quota Exceeded" karena menggunakan Key publik/bersama.
+export const GEMINI_API_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY') || "";
 
 // -------------------------------------
 

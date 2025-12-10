@@ -6,6 +6,12 @@ import { GEMINI_API_KEY } from "../constants";
 let aiInstance: GoogleGenAI | null = null;
 let currentKey: string | null = null;
 
+// Helper to reset instance (used when user updates Key in Settings)
+export const resetAiInstance = () => {
+    aiInstance = null;
+    currentKey = null;
+};
+
 // Helper to initialize AI dynamically
 const getAiInstance = (): GoogleGenAI | null => {
   // Prioritize Env Var/Constant, then LocalStorage

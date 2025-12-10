@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
 import { SUPABASE_URL, SUPABASE_KEY, GEMINI_API_KEY } from '../constants';
+import { resetAiInstance } from '../services/geminiService';
+import { resetSupabaseClient } from '../services/sheetService';
 import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
@@ -61,19 +63,26 @@ const Pengaturan: React.FC = () => {
     alert("Pengaturan Sekolah berhasil disimpan!");
   };
 
-  const handleSaveDbConfig = () => {
+  const handleSaveDbConfig = async () => {
       if (isHardcodedSb) return;
       localStorage.setItem('supabase_url', sbUrl);
       localStorage.setItem('supabase_key', sbKey);
-      alert("Konfigurasi Database disimpan! Halaman akan dimuat ulang.");
-      window.location.reload();
+      
+      // Reset client Supabase agar menggunakan config baru
+      resetSupabaseClient();
+      
+      alert("Konfigurasi Database disimpan! Mencoba terhubung...");
+      await testConnection();
   };
 
   const handleSaveAiConfig = () => {
       if (isHardcodedAi) return;
       localStorage.setItem('gemini_api_key', aiKey);
-      alert("Konfigurasi AI disimpan! Halaman akan dimuat ulang.");
-      window.location.reload();
+      
+      // Reset instance AI agar menggunakan key baru
+      resetAiInstance();
+      
+      alert("Konfigurasi AI disimpan! Anda bisa langsung mencobanya di menu Input Nilai.");
   };
 
   const handleClearData = () => {
@@ -82,7 +91,12 @@ const Pengaturan: React.FC = () => {
           localStorage.removeItem('supabase_key');
           localStorage.removeItem('gemini_api_key');
           localStorage.removeItem('raporPaudData');
-          window.location.reload();
+          
+          resetSupabaseClient();
+          resetAiInstance();
+          
+          alert("Semua konfigurasi lokal telah dihapus.");
+          window.location.reload(); // Reload diperlukan di sini untuk reset total state aplikasi
       }
   };
 
@@ -94,7 +108,7 @@ const Pengaturan: React.FC = () => {
           alert("Koneksi Database Berhasil!");
       } catch (e) {
           setConnStatus('error');
-          alert("Gagal terhubung ke Database.");
+          alert("Gagal terhubung ke Database. Periksa URL dan Key Anda.");
       }
   };
 

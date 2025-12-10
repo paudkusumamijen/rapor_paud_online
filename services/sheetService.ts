@@ -12,6 +12,11 @@ const getSupabaseConfig = () => {
   return { url, key };
 };
 
+// Reset Helper (For Settings Page)
+export const resetSupabaseClient = () => {
+    supabase = null;
+};
+
 // Initialize Supabase if config exists
 const initSupabase = () => {
   const { url, key } = getSupabaseConfig();
