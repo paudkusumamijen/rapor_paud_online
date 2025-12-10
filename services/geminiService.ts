@@ -6,28 +6,54 @@ import { GEMINI_API_KEY } from "../constants";
 let aiInstance: GoogleGenAI | null = null;
 let currentKey: string | null = null;
 
-// Helper to reset instance (used when user updates Key in Settings)
+// Helper to reset instance
 export const resetAiInstance = () => {
     aiInstance = null;
     currentKey = null;
 };
 
-// Helper to initialize AI dynamically
-const getAiInstance = (): GoogleGenAI | null => {
-  // Prioritas Utama: Menggunakan Key dari Constants (Hardcode)
-  // Jika di constants kosong ("" atau "GANTI_..."), baru cek localStorage
+// Helper untuk mendapatkan API Key
+const getApiKey = (): string => {
   let apiKey = GEMINI_API_KEY;
-  
-  // Cek apakah key masih default/kosong
   if (!apiKey || apiKey.includes("GANTI_DENGAN_API_KEY")) {
       apiKey = localStorage.getItem('gemini_api_key') || "";
   }
+  return apiKey;
+};
 
-  if (!apiKey) {
-    return null;
-  }
+// Helper untuk cek apakah key adalah Groq (dimulai dengan gsk_)
+const isGroqKey = (key: string) => key.startsWith('gsk_');
 
-  // Re-initialize if key changes or instance is null
+// === GROQ API HANDLER ===
+const callGroqApi = async (apiKey: string, prompt: string) => {
+    try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                messages: [{ role: "user", content: prompt }],
+                model: "llama3-70b-8192", // Menggunakan Model Llama 3 yang kuat
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || "Groq API Error");
+        }
+
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || "Gagal menghasilkan deskripsi.";
+    } catch (error: any) {
+        throw new Error(`Groq Error: ${error.message}`);
+    }
+};
+
+// === GOOGLE GEMINI HANDLER ===
+const getGeminiInstance = (apiKey: string): GoogleGenAI | null => {
   if (!aiInstance || currentKey !== apiKey) {
       try {
         aiInstance = new GoogleGenAI({ apiKey });
@@ -37,18 +63,17 @@ const getAiInstance = (): GoogleGenAI | null => {
         return null;
       }
   }
-
   return aiInstance;
 };
 
-const handleGeminiError = (error: any): string => {
+const handleApiError = (error: any): string => {
     const errMsg = error.message || JSON.stringify(error);
     
     if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
         return "⚠️ KUOTA HABIS: Batas penggunaan AI harian tercapai. Silakan coba lagi besok atau gunakan Template Offline.";
     }
     
-    if (errMsg.includes("API Key")) {
+    if (errMsg.includes("API Key") || errMsg.includes("authentication")) {
         return "⚠️ API Key Salah/Tidak Valid. Periksa file constants.ts atau menu Pengaturan.";
     }
 
@@ -56,36 +81,27 @@ const handleGeminiError = (error: any): string => {
 };
 
 // --- FITUR TEMPLATE MANUAL (OFFLINE) ---
-// Digunakan jika AI Error atau Kuota Habis
 export const generateTemplateDescription = (
     studentName: string,
     category: string,
     assessmentsData: { tp: string, activity: string, score: AssessmentLevel }[]
 ): string => {
-    // Kelompokkan TP berdasarkan nilai
     const mahir = assessmentsData.filter(a => a.score === AssessmentLevel.MAHIR);
     const cakap = assessmentsData.filter(a => a.score === AssessmentLevel.CAKAP);
     const berkembang = assessmentsData.filter(a => a.score === AssessmentLevel.BERKEMBANG);
 
     let descParts = [];
-
-    // Kalimat Pembuka
     descParts.push(`Pada aspek ${category}, Ananda ${studentName}`);
 
-    // Bagian Mahir (Sangat Baik)
     if (mahir.length > 0) {
         const activities = mahir.map(a => a.activity.toLowerCase()).join(", ");
         descParts.push(`menunjukkan kemampuan yang sangat baik dalam ${activities}.`);
     }
-
-    // Bagian Cakap (Sesuai Harapan)
     if (cakap.length > 0) {
         const activities = cakap.map(a => a.activity.toLowerCase()).join(", ");
         const connector = mahir.length > 0 ? "Selain itu, ananda juga" : "telah";
         descParts.push(`${connector} mampu ${activities}.`);
     }
-
-    // Bagian Berkembang (Perlu Bimbingan)
     if (berkembang.length > 0) {
         const activities = berkembang.map(a => a.activity.toLowerCase()).join(", ");
         descParts.push(`Namun, ananda masih memerlukan bimbingan dan motivasi dalam hal ${activities} agar dapat berkembang lebih optimal.`);
@@ -100,15 +116,14 @@ export const generateCategoryDescription = async (
   assessmentsData: { tp: string, activity: string, score: AssessmentLevel }[],
   teacherKeywords: string
 ): Promise<string> => {
-  const ai = getAiInstance();
+  const apiKey = getApiKey();
   
-  // Fallback ke Template Manual jika AI tidak aktif
-  if (!ai) {
+  // Fallback ke Template Manual jika AI Key tidak ada
+  if (!apiKey) {
       console.warn("AI Key not found, using offline template.");
       return generateTemplateDescription(studentName, category, assessmentsData);
   }
   
-  // Format data penilaian menjadi teks untuk prompt
   const assessmentList = assessmentsData.map(a => {
       let scoreText = "";
       switch (a.score) {
@@ -142,13 +157,21 @@ export const generateCategoryDescription = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-    return response.text?.trim() || "Gagal menghasilkan deskripsi.";
+    if (isGroqKey(apiKey)) {
+        // --- USE GROQ API ---
+        return await callGroqApi(apiKey, prompt);
+    } else {
+        // --- USE GOOGLE GEMINI API ---
+        const ai = getGeminiInstance(apiKey);
+        if (!ai) return "Gagal inisialisasi AI.";
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text?.trim() || "Gagal menghasilkan deskripsi.";
+    }
   } catch (error) {
-    return handleGeminiError(error);
+    return handleApiError(error);
   }
 };
 
@@ -158,9 +181,9 @@ export const generateP5Description = async (
   score: AssessmentLevel,
   keywords: string
 ): Promise<string> => {
-  const ai = getAiInstance();
+  const apiKey = getApiKey();
   
-  if (!ai) {
+  if (!apiKey) {
      return `Ananda ${studentName} menunjukkan perkembangan dalam ${subDimension}. ${keywords}`;
   }
 
@@ -186,12 +209,20 @@ export const generateP5Description = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-    return response.text?.trim() || "Gagal menghasilkan deskripsi.";
+    if (isGroqKey(apiKey)) {
+        // --- USE GROQ API ---
+        return await callGroqApi(apiKey, prompt);
+    } else {
+        // --- USE GOOGLE GEMINI API ---
+        const ai = getGeminiInstance(apiKey);
+        if (!ai) return "Gagal inisialisasi AI.";
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text?.trim() || "Gagal menghasilkan deskripsi.";
+    }
   } catch (error) {
-    return handleGeminiError(error);
+    return handleApiError(error);
   }
 };

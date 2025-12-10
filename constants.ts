@@ -23,14 +23,13 @@ const ENV_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY');
 export const SUPABASE_URL = ENV_URL || "https://wohhrumqbuwhfulhrlfy.supabase.co"; 
 export const SUPABASE_KEY = ENV_KEY || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_"; 
 
-// --- KONFIGURASI AI (GEMINI) ---
+// --- KONFIGURASI AI (GEMINI / GROQ) ---
 
 // OPSI 1: ENVIRONMENT VARIABLES
 const ENV_AI_KEY = getEnv('REACT_APP_GEMINI_API_KEY') || getEnv('VITE_GEMINI_API_KEY');
 
 // OPSI 2: CONFIG MANUAL (HARDCODE) - AGAR GURU TIDAK PERLU INPUT MANUAL
-// Masukkan API Key Google Gemini Anda di dalam tanda kutip di bawah ini.
-// Contoh: export const GEMINI_API_KEY = ENV_AI_KEY || "AIzaSyD_ContohKeyAndaDisiniXyz";
+// Masukkan API Key (Bisa Google Gemini 'AIza...' atau Groq 'gsk_...')
 export const GEMINI_API_KEY = ENV_AI_KEY || "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";
 
 // -------------------------------------
