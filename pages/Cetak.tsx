@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TP_CATEGORIES } from '../constants';
@@ -39,7 +38,7 @@ const Cetak: React.FC = () => {
             <meta charset="UTF-8">
             <title>${title}</title>
             <script src="https://cdn.tailwindcss.com"></script>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
             <style>
                 body { 
                     font-family: 'Inter', sans-serif; 
@@ -59,7 +58,7 @@ const Cetak: React.FC = () => {
                 .sheet { 
                     width: 210mm; 
                     min-height: 297mm; 
-                    padding: 15mm 20mm; 
+                    padding: 15mm; 
                     margin: 0 auto; 
                     position: relative; 
                     box-sizing: border-box; 
@@ -71,23 +70,60 @@ const Cetak: React.FC = () => {
                     page-break-after: auto; 
                 }
 
-                /* Table Styles */
-                table { border-collapse: collapse; width: 100%; font-size: 12px; }
-                th, td { border: 1px solid #000; padding: 6px; }
-                th { text-align: center; font-weight: bold; }
-                
-                .no-border-table td, .no-border-table th { border: none !important; padding: 2px 4px; }
-                
+                /* --- REPORT TABLE STYLES --- */
+                .report-table {
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    border: 1px solid #000000;
+                    border-radius: 8px; /* Lengkungan sudut */
+                    overflow: hidden;
+                    font-size: 11px;
+                    margin-bottom: 0;
+                }
+
+                .report-table th, .report-table td {
+                    border-right: 1px solid #000000;
+                    border-bottom: 1px solid #000000;
+                    padding: 6px 8px;
+                }
+
+                .report-table th {
+                    background-color: #e2e8f0 !important; /* bg-slate-200 */
+                    color: #000000 !important;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    text-align: center;
+                    border-top: none;
+                }
+
+                /* Hilangkan border ganda pada sisi kanan dan bawah tabel */
+                .report-table th:last-child, 
+                .report-table td:last-child {
+                    border-right: none;
+                }
+
+                .report-table tr:last-child td {
+                    border-bottom: none;
+                }
+
                 /* Helper classes */
                 .text-justify { text-align: justify; }
                 .font-bold { font-weight: 700; }
+                .font-black { font-weight: 900; }
                 .uppercase { text-transform: uppercase; }
                 .text-center { text-align: center; }
                 
-                /* Color utilities for print */
-                .bg-yellow-100 { background-color: #fef9c3 !important; }
-                .bg-green-100 { background-color: #dcfce7 !important; }
-                .bg-blue-100 { background-color: #dbeafe !important; }
+                .no-border-table td, .no-border-table th { border: none !important; padding: 2px 4px; }
+                
+                /* Utilities for Badges (Print Safe) */
+                .bg-yellow-200 { background-color: #fef08a !important; } 
+                .bg-green-200 { background-color: #bbf7d0 !important; }  
+                .bg-blue-200 { background-color: #bfdbfe !important; }    
+                
+                .border-yellow-400 { border-color: #facc15 !important; }
+                .border-green-400 { border-color: #4ade80 !important; }
+                .border-blue-400 { border-color: #60a5fa !important; }
             </style>
         </head>
         <body>
@@ -106,17 +142,64 @@ const Cetak: React.FC = () => {
     printWindow.document.close();
   };
 
-  const getScoreStyle = (score: number) => {
+  const getBadgeContent = (score: number) => {
       switch (score) {
-          case 1: return "bg-yellow-100 text-yellow-900"; // Berkembang - Kuning Transparan
-          case 2: return "bg-green-100 text-green-900";   // Cakap - Hijau Transparan
-          case 3: return "bg-blue-100 text-blue-900";     // Mahir - Biru Transparan
-          default: return "";
+          case 1: // BERKEMBANG
+              return (
+                  <span className="inline-block px-3 py-1 rounded-full bg-yellow-200 text-black border border-yellow-400 text-[9px] font-black tracking-wider uppercase shadow-sm whitespace-nowrap">
+                      BERKEMBANG
+                  </span>
+              );
+          case 2: // CAKAP
+              return (
+                  <span className="inline-block px-3 py-1 rounded-full bg-blue-200 text-black border border-blue-400 text-[9px] font-black tracking-wider uppercase shadow-sm whitespace-nowrap">
+                      CAKAP
+                  </span>
+              );
+          case 3: // MAHIR
+              return (
+                  <span className="inline-block px-3 py-1 rounded-full bg-green-200 text-black border border-green-400 text-[9px] font-black tracking-wider uppercase shadow-sm whitespace-nowrap">
+                      MAHIR
+                  </span>
+              );
+          default: 
+              return "-";
       }
   };
 
   return (
     <div className="h-full flex flex-col">
+      {/* INJECT STYLES FOR PREVIEW CONSISTENCY */}
+      <style>{`
+        .report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #000000;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 11px;
+        }
+        .report-table th, .report-table td {
+            border-right: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            padding: 6px 8px;
+        }
+        .report-table th {
+            background-color: #e2e8f0;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        .report-table th:last-child, .report-table td:last-child {
+            border-right: none;
+        }
+        .report-table tr:last-child td {
+            border-bottom: none;
+        }
+      `}</style>
+
       <div className="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
         <div>
             <h1 className="text-2xl font-bold text-slate-800">Cetak Rapor</h1>
@@ -147,12 +230,11 @@ const Cetak: React.FC = () => {
       
       <div className="flex-1 bg-slate-700 overflow-auto p-8 flex justify-center rounded-xl border border-slate-600 relative shadow-inner">
         {selectedStudent ? (
-            // WRAPPER FOR ALL PAGES (HIDDEN VISUALLY BUT USED FOR CLONING TO PRINT WINDOW)
+            // WRAPPER FOR ALL PAGES
             <div id="print-area-all" className="transform scale-[0.6] md:scale-[0.85] origin-top transition-transform">
                 
                 {/* ================= SHEET 1: COVER ================= */}
-                {/* A4 Size: 210mm x 297mm */}
-                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm 20mm' }}>
+                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
                      <div className="w-full h-full border-[3px] border-double border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-between" style={{ minHeight: 'calc(297mm - 30mm)' }}>
                         <div className="mt-10 text-center">
                             <img 
@@ -193,7 +275,7 @@ const Cetak: React.FC = () => {
                 </div>
 
                 {/* ================= SHEET 2: IDENTITY ================= */}
-                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm 20mm' }}>
+                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
                     <div className="text-center mb-8">
                         <div className="inline-block bg-slate-900 text-white px-6 py-1.5 rounded-full mb-4 font-bold tracking-widest uppercase text-xs">
                             PAUD MERDEKA
@@ -247,7 +329,7 @@ const Cetak: React.FC = () => {
                 </div>
 
                 {/* ================= SHEET 3: RAPOR ISI ================= */}
-                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm 20mm' }}>
+                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
                     <div className="text-center mb-6">
                         <h2 className="text-md font-bold uppercase leading-tight">
                             LAPORAN HASIL PERKEMBANGAN PESERTA DIDIK<br/>
@@ -278,7 +360,7 @@ const Cetak: React.FC = () => {
 
                     {/* I. CAPAIAN PEMBELAJARAN (INTRAKURIKULER) */}
                     <h3 className="text-sm font-bold text-slate-900 uppercase mb-2">I. Capaian Pembelajaran</h3>
-                    <div className="space-y-4 mb-6">
+                    <div className="space-y-6 mb-6">
                         {TP_CATEGORIES.map(category => {
                             const catTps = tps.filter(t => t.category === category && String(t.classId) === String(selectedStudent.classId));
                             if (catTps.length === 0) return null;
@@ -288,15 +370,15 @@ const Cetak: React.FC = () => {
                             
                             return (
                                 <div key={category} className="mb-4">
-                                    <div className="font-bold text-xs uppercase mb-1 pl-1 border-l-4 border-slate-800">
+                                    <div className="font-bold text-xs uppercase mb-1 pl-2 border-l-4 border-slate-800 tracking-wide">
                                         {category}
                                     </div>
-                                    <table className="w-full mb-0">
+                                    <table className="report-table">
                                         <thead>
                                             <tr>
-                                                <th className="p-1 w-[35%] text-left bg-white">Tujuan Pembelajaran</th>
-                                                <th className="p-1 w-[40%] text-left bg-white">Aktivitas</th>
-                                                <th className="p-1 text-center bg-white">Nilai</th>
+                                                <th className="w-[35%]">Tujuan Pembelajaran</th>
+                                                <th className="w-[45%]">Aktivitas</th>
+                                                <th className="w-[20%]">DIMENSI KEMANDIRIAN</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -304,23 +386,27 @@ const Cetak: React.FC = () => {
                                                 const ass = catAssessments.find(a => String(a.tpId) === String(tp.id));
                                                 const score = ass?.score || 0;
                                                 return (
-                                                    <tr key={tp.id}>
-                                                        <td className="align-top text-[11px]">{tp.description}</td>
-                                                        <td className="align-top text-[11px] text-slate-600 italic">{tp.activity}</td>
-                                                        <td className={`align-middle text-center font-bold text-[10px] uppercase p-1 ${getScoreStyle(score)}`}>
-                                                            {score === 1 && "Berkembang"}
-                                                            {score === 2 && "Cakap"}
-                                                            {score === 3 && "Mahir"}
-                                                            {!score && "-"}
+                                                    <tr key={tp.id} className="even:bg-slate-50">
+                                                        <td className="align-top text-[11px] leading-snug">{tp.description}</td>
+                                                        <td className="align-top text-[11px] text-slate-600 italic leading-snug">{tp.activity}</td>
+                                                        <td className="align-middle text-center">
+                                                            {getBadgeContent(score)}
                                                         </td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
-                                    <div className="border border-t-0 border-black p-2 bg-slate-50">
-                                        <p className="text-[10px] font-bold text-slate-500 mb-0.5">DESKRIPSI:</p>
-                                        <p className="text-justify text-[11px] leading-tight">{catResult?.generatedDescription || "-"}</p>
+                                    
+                                    {/* Deskripsi Box */}
+                                    <div className="border border-black p-3 bg-white shadow-sm rounded-lg mt-2 relative z-0">
+                                        <p className="text-[10px] font-black text-slate-500 mb-1 tracking-widest uppercase flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block"></span>
+                                            Deskripsi Capaian
+                                        </p>
+                                        <p className="text-justify text-[11px] leading-relaxed text-slate-800 font-medium">
+                                            {catResult?.generatedDescription || "-"}
+                                        </p>
                                     </div>
                                 </div>
                             );
@@ -331,11 +417,11 @@ const Cetak: React.FC = () => {
                     {p5Criteria.length > 0 && (
                         <div className="mb-6">
                             <h3 className="text-sm font-bold text-slate-900 uppercase mb-2">II. Projek Penguatan Profil Pelajar Pancasila (P5)</h3>
-                            <table className="w-full">
+                            <table className="report-table">
                                 <thead>
                                     <tr>
-                                        <th className="p-1 w-[30%] text-left bg-white">Dimensi</th>
-                                        <th className="p-1 text-left bg-white">Deskripsi Capaian</th>
+                                        <th className="w-[30%]">Dimensi</th>
+                                        <th>Deskripsi Capaian</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -350,11 +436,15 @@ const Cetak: React.FC = () => {
                                             else desc = "-";
                                         }
                                         return (
-                                            <tr key={c.id}>
+                                            <tr key={c.id} className="even:bg-slate-50">
                                                 <td className="align-top font-bold text-[11px]">{c.subDimension}</td>
                                                 <td className="align-top text-justify text-[11px] leading-tight relative">
                                                     {desc}
-                                                    {score && <span className={`absolute top-1 right-1 text-[9px] px-1 rounded border ${getScoreStyle(score)}`}>{score === 1 ? 'MB' : score === 2 ? 'BSH' : 'SB'}</span>}
+                                                    {score && (
+                                                        <div className="mt-1 text-right">
+                                                           {getBadgeContent(score)}
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );
@@ -371,7 +461,7 @@ const Cetak: React.FC = () => {
                              {studentReflections.length > 0 && (
                                 <div>
                                      <h3 className="text-xs font-bold text-slate-900 uppercase mb-1">III. Refleksi Orang Tua</h3>
-                                     <div className="border border-black p-2 space-y-2 text-[11px]">
+                                     <div className="border border-black p-2 space-y-2 text-[11px] rounded-lg bg-slate-50">
                                         {studentReflections.map(r => (
                                             <div key={r.id}><p className="font-bold text-slate-700">{r.question}</p><p className="italic pl-2 text-slate-900">"{r.answer}"</p></div>
                                         ))}
@@ -381,43 +471,46 @@ const Cetak: React.FC = () => {
                              {/* CATATAN */}
                              <div>
                                  <h3 className="text-xs font-bold text-slate-900 uppercase mb-1">IV. Catatan Guru</h3>
-                                 <div className="border border-black p-2 text-[11px] text-justify min-h-[50px]">{studentNote?.note || "-"}</div>
+                                 <div className="border border-black p-2 text-[11px] text-justify min-h-[50px] rounded-lg bg-white">{studentNote?.note || "-"}</div>
                              </div>
                          </div>
 
                          {/* KEHADIRAN */}
                          <div className="w-1/3">
                              <h3 className="text-xs font-bold text-slate-900 uppercase mb-1">V. Kehadiran</h3>
-                             <table className="w-full text-xs">
+                             <table className="report-table">
+                                <thead>
+                                    <tr><th className="text-left">Keterangan</th><th className="text-center">Jumlah</th></tr>
+                                </thead>
                                 <tbody>
-                                    <tr><td className="p-1">Sakit</td><td className="p-1 text-center font-bold">{studentAttendance.sick}</td></tr>
-                                    <tr><td className="p-1">Izin</td><td className="p-1 text-center font-bold">{studentAttendance.permission}</td></tr>
-                                    <tr><td className="p-1">Tanpa Ket.</td><td className="p-1 text-center font-bold">{studentAttendance.alpha}</td></tr>
+                                    <tr><td>Sakit</td><td className="text-center font-bold">{studentAttendance.sick}</td></tr>
+                                    <tr><td>Izin</td><td className="text-center font-bold">{studentAttendance.permission}</td></tr>
+                                    <tr><td>Tanpa Ket.</td><td className="text-center font-bold">{studentAttendance.alpha}</td></tr>
                                 </tbody>
                              </table>
                          </div>
                     </div>
 
                     {/* SIGNATURES */}
-                    <div className="flex justify-between text-xs mt-8" style={{ pageBreakInside: 'avoid' }}>
-                        <div className="text-center w-40">
+                    <div className="flex justify-between text-xs mt-8 px-4" style={{ pageBreakInside: 'avoid' }}>
+                        <div className="text-center w-48">
                             <p>Mengetahui,</p>
-                            <p>Orang Tua/Wali,</p>
-                            <div className="h-16"></div>
-                            <p className="border-b border-black inline-block px-8 w-32 mx-auto"></p>
+                            <p className="font-bold">Orang Tua/Wali,</p>
+                            <div className="h-20"></div>
+                            <p className="border-b border-black inline-block w-full mx-auto"></p>
                         </div>
-                        <div className="text-center w-40">
+                        <div className="text-center min-w-[220px]">
                             <p>{settings.reportPlace}, {settings.reportDate}</p>
                             <p>Wali Kelas,</p>
-                            <div className="h-16"></div>
-                            <p className="font-bold underline">{studentClass?.teacherName || settings.teacher}</p>
+                            <div className="h-20"></div>
+                            <p className="font-bold underline whitespace-nowrap">{studentClass?.teacherName || settings.teacher}</p>
                             <p>NUPTK: {studentClass?.nuptk || '-'}</p>
                         </div>
                     </div>
                      <div className="mt-4 text-center text-xs" style={{ pageBreakInside: 'avoid' }}>
                         <p>Mengetahui,</p>
                         <p>Kepala Sekolah</p>
-                        <div className="h-16"></div>
+                        <div className="h-20"></div>
                         <p className="font-bold underline">{settings.headmaster}</p>
                     </div>
                 </div>

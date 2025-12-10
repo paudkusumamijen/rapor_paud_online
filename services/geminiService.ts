@@ -1,15 +1,11 @@
-
-
 import { GoogleGenAI } from "@google/genai";
 import { AssessmentLevel } from "../types";
 
 let aiInstance: GoogleGenAI | null = null;
-let currentKey: string | null = null;
 
 // Helper to reset instance
 export const resetAiInstance = () => {
     aiInstance = null;
-    currentKey = null;
 };
 
 // === GROQ API HANDLER ===
@@ -42,15 +38,9 @@ const callGroqApi = async (apiKey: string, prompt: string) => {
 };
 
 // === GOOGLE GEMINI HANDLER ===
-const getGeminiInstance = (apiKey: string): GoogleGenAI | null => {
-  if (!aiInstance || currentKey !== apiKey) {
-      try {
-        aiInstance = new GoogleGenAI({ apiKey });
-        currentKey = apiKey;
-      } catch (error) {
-        console.error("Failed to initialize GoogleGenAI.", error);
-        return null;
-      }
+const getGeminiInstance = (): GoogleGenAI => {
+  if (!aiInstance) {
+      aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return aiInstance;
 };
@@ -63,7 +53,7 @@ const handleApiError = (error: any): string => {
     }
     
     if (errMsg.includes("API Key") || errMsg.includes("authentication") || errMsg.includes("invalid_api_key")) {
-        return "⚠️ API Key Salah/Tidak Valid. Mohon periksa kembali API Key di menu Pengaturan.";
+        return "⚠️ API Key Salah/Tidak Valid. Mohon periksa kembali API Key.";
     }
 
     return `Gagal generate: ${errMsg.substring(0, 100)}...`;
@@ -108,9 +98,9 @@ export const generateCategoryDescription = async (
   provider: 'gemini' | 'groq' = 'groq'
 ): Promise<string> => {
   
-  // Fallback ke Template Manual jika AI Key tidak ada
-  if (!apiKey) {
-      console.warn("AI Key not found in DB Settings, using offline template.");
+  // Fallback ke Template Manual jika API Key tidak ada untuk Groq
+  if (provider === 'groq' && !apiKey) {
+      console.warn("Groq API Key not found, using offline template.");
       return generateTemplateDescription(studentName, category, assessmentsData);
   }
   
@@ -152,8 +142,7 @@ export const generateCategoryDescription = async (
         return await callGroqApi(apiKey, prompt);
     } else {
         // --- USE GOOGLE GEMINI API ---
-        const ai = getGeminiInstance(apiKey);
-        if (!ai) return "Gagal inisialisasi AI.";
+        const ai = getGeminiInstance();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -174,7 +163,7 @@ export const generateP5Description = async (
   provider: 'gemini' | 'groq' = 'groq'
 ): Promise<string> => {
   
-  if (!apiKey) {
+  if (provider === 'groq' && !apiKey) {
      return `Ananda ${studentName} menunjukkan perkembangan dalam ${subDimension}. ${keywords}`;
   }
 
@@ -205,8 +194,7 @@ export const generateP5Description = async (
         return await callGroqApi(apiKey, prompt);
     } else {
         // --- USE GOOGLE GEMINI API ---
-        const ai = getGeminiInstance(apiKey);
-        if (!ai) return "Gagal inisialisasi AI.";
+        const ai = getGeminiInstance();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
