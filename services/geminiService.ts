@@ -142,6 +142,7 @@ export const generateCategoryDescription = async (
         return await callGroqApi(apiKey, prompt);
     } else {
         // --- USE GOOGLE GEMINI API ---
+        // Explicitly ignore the passed apiKey for Gemini, rely on process.env
         const ai = getGeminiInstance();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -194,6 +195,7 @@ export const generateP5Description = async (
         return await callGroqApi(apiKey, prompt);
     } else {
         // --- USE GOOGLE GEMINI API ---
+        // Explicitly ignore the passed apiKey for Gemini, rely on process.env
         const ai = getGeminiInstance();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',

@@ -1,14 +1,12 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
 import { SUPABASE_URL, SUPABASE_KEY } from '../constants';
-import { resetSupabaseClient } from '../services/sheetService';
-import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle, Cpu, ShieldCheck, Edit } from 'lucide-react';
+import { resetSupabaseClient, sheetService } from '../services/sheetService';
+import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle, Cpu, ShieldCheck, Edit, Loader2 } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
-  const { settings, setSettings, refreshData, isLoading } = useApp();
+  const { settings, setSettings, refreshData, isLoading, isOnline } = useApp();
   const [formData, setFormData] = useState<SchoolSettings>(settings);
   
   // States for DB Config (Supabase URL/Key must still be handled locally/env as they are needed to connect)
@@ -16,6 +14,7 @@ const Pengaturan: React.FC = () => {
   const [sbKey, setSbKey] = useState('');
 
   const [connStatus, setConnStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Cek apakah konfigurasi Supabase sudah ditanam (via Env Vars)
@@ -46,10 +45,44 @@ const Pengaturan: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { alert("Ukuran file maksimal 2MB"); return; }
+      
+      setIsUploadingLogo(true);
       const reader = new FileReader();
+      
       reader.onload = (event) => {
         if (event.target?.result) {
-            setFormData(prev => ({ ...prev, logoUrl: event.target?.result as string }));
+            // Jika Online, Upload ke Storage
+            if (isOnline) {
+                 const img = new Image();
+                 img.src = event.target.result as string;
+                 img.onload = async () => {
+                     const canvas = document.createElement('canvas');
+                     const ctx = canvas.getContext('2d');
+                     // Resize logo
+                     const maxSize = 300;
+                     let width = img.width; let height = img.height;
+                     if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } 
+                     else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                     canvas.width = width; canvas.height = height;
+                     ctx?.drawImage(img, 0, 0, width, height);
+                     
+                     canvas.toBlob(async (blob) => {
+                         if (blob) {
+                             const publicUrl = await sheetService.uploadImage(blob, 'school', `logo_${Date.now()}.jpg`);
+                             if (publicUrl) {
+                                 setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+                             } else {
+                                 alert("Gagal upload logo. Pastikan bucket 'images' ada.");
+                             }
+                             setIsUploadingLogo(false);
+                         }
+                     }, 'image/jpeg', 0.8);
+                 };
+            } else {
+                 // Offline Fallback
+                 setFormData(prev => ({ ...prev, logoUrl: event.target?.result as string }));
+                 setIsUploadingLogo(false);
+            }
         }
       };
       reader.readAsDataURL(file);
@@ -132,6 +165,11 @@ const Pengaturan: React.FC = () => {
                 </h2>
                 <div className="flex items-center gap-6">
                     <div className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-slate-50 overflow-hidden relative">
+                         {isUploadingLogo && (
+                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-10">
+                                 <Loader2 className="animate-spin text-white" size={24} />
+                             </div>
+                         )}
                         {formData.logoUrl ? (
                             <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" />
                         ) : (
@@ -141,17 +179,20 @@ const Pengaturan: React.FC = () => {
                     <div className="flex-1">
                         <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                         <div className="flex gap-2">
-                             <button onClick={() => logoInputRef.current?.click()} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2"><Upload size={16}/> Upload Logo</button>
+                             <button onClick={() => logoInputRef.current?.click()} disabled={isUploadingLogo} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50">
+                                <Upload size={16}/> {isUploadingLogo ? 'Mengupload...' : 'Upload Logo'}
+                             </button>
                              {formData.logoUrl && (
                                 <button onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))} className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100"><Trash2 size={16}/></button>
                              )}
                         </div>
+                        {isOnline && <p className="text-[10px] text-slate-400 mt-2">Disimpan di Storage, bukan DB.</p>}
                     </div>
                 </div>
             </div>
             
             <div className="flex justify-end">
-                <button onClick={handleSaveSettings} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-700 flex items-center gap-2 shadow-lg">
+                <button onClick={handleSaveSettings} disabled={isUploadingLogo} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-700 flex items-center gap-2 shadow-lg disabled:opacity-50">
                     <Save size={20}/> Simpan Data Sekolah
                 </button>
             </div>
@@ -163,7 +204,9 @@ const Pengaturan: React.FC = () => {
                 <h2 className="text-lg font-bold text-slate-800 mb-4">Penandatangan Rapor</h2>
                 <div className="space-y-4">
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Kepala Sekolah</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.headmaster || ''} onChange={e => handleChange('headmaster', e.target.value)} /></div>
-                    <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Guru Kelas (Default)</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.teacher || ''} onChange={e => handleChange('teacher', e.target.value)} /></div>
+                    
+                    {/* INPUT GURU KELAS DEFAULT DIHILANGKAN */}
+                    
                     <div className="grid grid-cols-2 gap-4">
                         <div><label className="block text-sm font-medium text-slate-700 mb-1">Semester</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.semester || ''} onChange={e => handleChange('semester', e.target.value)} /></div>
                         <div><label className="block text-sm font-medium text-slate-700 mb-1">Tahun Ajaran</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.academicYear || ''} onChange={e => handleChange('academicYear', e.target.value)} /></div>

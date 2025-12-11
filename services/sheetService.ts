@@ -111,6 +111,37 @@ export const sheetService = {
     return this.supabaseOp('upsert', 'settings', payload);
   },
 
+  // --- STORAGE OPERATION (NEW) ---
+  async uploadImage(file: Blob, folder: 'students' | 'school', fileNameProp?: string): Promise<string | null> {
+    const sb = initSupabase();
+    if (!sb) return null;
+
+    try {
+        // Generate Unique Filename
+        const fileExt = file.type.split('/')[1] || 'jpg';
+        const uniqueName = fileNameProp || `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+        const filePath = `${folder}/${uniqueName}`;
+
+        // 1. Upload to 'images' bucket
+        const { error: uploadError } = await sb.storage
+            .from('images')
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        // 2. Get Public URL
+        const { data } = sb.storage.from('images').getPublicUrl(filePath);
+        return data.publicUrl;
+
+    } catch (error) {
+        console.error("Storage Upload Error:", error);
+        return null;
+    }
+  },
+
   // --- SUPABASE OPERATIONS ---
   async supabaseOp(op: 'insert'|'update'|'delete'|'upsert', collection: string, data: any): Promise<ApiResponse> {
     const sb = initSupabase();

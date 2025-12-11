@@ -1,16 +1,20 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Student } from '../types';
-import { Trash2, Edit2, Plus, X, Camera, User, Download, Upload, FileSpreadsheet, Filter } from 'lucide-react';
+import { Trash2, Edit2, Plus, X, Camera, User, Download, Upload, FileSpreadsheet, Filter, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { sheetService } from '../services/sheetService';
 
 const DataSiswa: React.FC = () => {
-  const { students, classes, addStudent, updateStudent, deleteStudent, confirmAction } = useApp();
+  const { students, classes, addStudent, updateStudent, deleteStudent, confirmAction, isOnline } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Student>>({});
   
   const [filterClassId, setFilterClassId] = useState<string>('');
+  
+  // State upload
+  const [isUploading, setIsUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -58,31 +62,61 @@ const DataSiswa: React.FC = () => {
     }
   };
 
-  // ... (Rest of photo upload, import/export logic is same, only rendering part for buttons changed)
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
         if (file.size > 2 * 1024 * 1024) { alert("Ukuran foto maksimal 2MB"); return; }
+        
+        setIsUploading(true);
+
+        // 1. Resize Image Client-Side using Canvas
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
-            img.onload = () => {
+            img.onload = async () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const maxSize = 300;
+                const maxSize = 500; // Resize to max 500px width/height to save even more space
                 let width = img.width; let height = img.height;
-                if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                
+                if (width > height) { 
+                    if (width > maxSize) { height *= maxSize / width; width = maxSize; } 
+                } else { 
+                    if (height > maxSize) { width *= maxSize / height; height = maxSize; } 
+                }
+                
                 canvas.width = width; canvas.height = height;
                 ctx?.drawImage(img, 0, 0, width, height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                setFormData(prev => ({ ...prev, photoUrl: dataUrl }));
+
+                // 2. Decide: Upload to Storage OR Keep as Base64 (Offline Mode)
+                if (isOnline) {
+                    // --- ONLINE: Upload Blob to Supabase Storage ---
+                    canvas.toBlob(async (blob) => {
+                        if (blob) {
+                            const publicUrl = await sheetService.uploadImage(blob, 'students');
+                            if (publicUrl) {
+                                setFormData(prev => ({ ...prev, photoUrl: publicUrl }));
+                            } else {
+                                alert("Gagal upload ke Storage. Pastikan bucket 'images' sudah dibuat dan Public.");
+                            }
+                            setIsUploading(false);
+                        }
+                    }, 'image/jpeg', 0.8);
+                } else {
+                    // --- OFFLINE: Fallback to Base64 ---
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    setFormData(prev => ({ ...prev, photoUrl: dataUrl }));
+                    setIsUploading(false);
+                }
             };
             if (event.target?.result) img.src = event.target.result as string;
         };
         reader.readAsDataURL(file);
     }
   };
+
   const triggerFileInput = () => fileInputRef.current?.click();
+
   const handleExportXLSX = () => {
     const headers = ["NISN", "Nama Siswa", "Kelas", "Tempat Lahir", "Tanggal Lahir (YYYY-MM-DD)", "Agama", "Anak Ke", "Jenis Kelamin (L/P)", "Tinggi Badan (CM)", "Berat Badan (KG)", "Nama Ayah", "Pekerjaan Ayah", "Nama Ibu", "Pekerjaan Ibu", "No Telp", "Alamat"];
     const dataToExport = (filterClassId ? filteredStudents : students).map(s => {
@@ -94,6 +128,7 @@ const DataSiswa: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
     XLSX.writeFile(wb, `Data_Siswa_Rapor_PAUD_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
   const handleImportClick = () => importInputRef.current?.click();
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -203,14 +238,22 @@ const DataSiswa: React.FC = () => {
                <div className="space-y-4">
                     <h3 className="font-semibold text-teal-600 border-b pb-1">Foto & Identitas</h3>
                     <div className="flex flex-col items-center p-4 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                        <div className="w-32 h-32 rounded-full bg-slate-200 overflow-hidden mb-3 border-2 border-white shadow-sm flex items-center justify-center">
+                        <div className="w-32 h-32 rounded-full bg-slate-200 overflow-hidden mb-3 border-2 border-white shadow-sm flex items-center justify-center relative">
+                            {isUploading ? (
+                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-10">
+                                    <Loader2 className="animate-spin text-white" size={32} />
+                                </div>
+                            ) : null}
                             {formData.photoUrl ? <img src={formData.photoUrl} alt="Preview" className="w-full h-full object-cover" /> : <User size={48} className="text-slate-400" />}
                         </div>
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                         <div className="flex gap-2">
-                            <button type="button" onClick={triggerFileInput} className="text-sm bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-100 flex items-center gap-2 transition-colors"><Camera size={14} /> {formData.photoUrl ? 'Ganti Foto' : 'Upload Foto'}</button>
+                            <button type="button" onClick={triggerFileInput} disabled={isUploading} className="text-sm bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-100 flex items-center gap-2 transition-colors disabled:opacity-50">
+                                <Camera size={14} /> {isUploading ? 'Mengupload...' : (formData.photoUrl ? 'Ganti Foto' : 'Upload Foto')}
+                            </button>
                             {formData.photoUrl && <button type="button" onClick={() => setFormData(prev => ({ ...prev, photoUrl: undefined }))} className="text-sm bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded-md hover:bg-red-100">Hapus</button>}
                         </div>
+                        {isOnline && <p className="text-[10px] text-slate-400 mt-2">Foto akan disimpan di Supabase Storage.</p>}
                     </div>
                     <input className="w-full p-2 border rounded text-slate-800 bg-white" placeholder="NISN" value={formData.nisn || ''} onChange={e => setFormData({...formData, nisn: e.target.value})} />
                     <input className="w-full p-2 border rounded text-slate-800 bg-white" placeholder="Nama Lengkap" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
@@ -235,7 +278,9 @@ const DataSiswa: React.FC = () => {
             </div>
             <div className="p-6 border-t bg-slate-50 flex justify-end gap-2 rounded-b-xl">
                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded text-slate-600 hover:bg-slate-200 transition-colors">Batal</button>
-                 <button type="button" onClick={handleSave} className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition-colors">Simpan Data</button>
+                 <button type="button" onClick={handleSave} disabled={isUploading} className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-50">
+                    {isUploading ? 'Tunggu Upload...' : 'Simpan Data'}
+                 </button>
             </div>
           </div>
         </div>

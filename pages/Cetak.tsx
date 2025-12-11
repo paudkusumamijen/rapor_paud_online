@@ -8,8 +8,9 @@ const Cetak: React.FC = () => {
   const { students, assessments, categoryResults, settings, classes, tps, p5Criteria, p5Assessments, reflections, notes, attendance } = useApp();
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   
-  const selectedStudent = students.find(s => s.id === selectedStudentId);
-  const studentClass = classes.find(c => c.id === selectedStudent?.classId);
+  // FIX: Pastikan ID dibandingkan sebagai String untuk menghindari mismatch tipe data (number vs string)
+  const selectedStudent = students.find(s => String(s.id) === String(selectedStudentId));
+  const studentClass = classes.find(c => String(c.id) === String(selectedStudent?.classId));
 
   // Filter Data for Selected Student
   const studentReflections = reflections.filter(r => String(r.studentId) === String(selectedStudentId));
@@ -31,6 +32,8 @@ const Cetak: React.FC = () => {
         return;
     }
 
+    let cleanHtml = contentElement.innerHTML;
+    
     const htmlContent = `
         <!DOCTYPE html>
         <html lang="id">
@@ -124,15 +127,20 @@ const Cetak: React.FC = () => {
                 .border-yellow-400 { border-color: #facc15 !important; }
                 .border-green-400 { border-color: #4ade80 !important; }
                 .border-blue-400 { border-color: #60a5fa !important; }
+
+                /* CSS for plain text description preserving whitespace */
+                .whitespace-pre-wrap {
+                    white-space: pre-wrap;
+                }
             </style>
         </head>
         <body>
-            ${contentElement.innerHTML}
+            ${cleanHtml}
             <script>
                 // Tunggu sebentar agar gambar/font terload, lalu print
                 setTimeout(() => {
                     window.print();
-                }, 800);
+                }, 1000);
             </script>
         </body>
         </html>
@@ -240,6 +248,7 @@ const Cetak: React.FC = () => {
                             <img 
                                 src={settings.logoUrl || "https://cdn-icons-png.flaticon.com/512/2997/2997300.png"} 
                                 alt="Logo Sekolah" 
+                                crossOrigin="anonymous"
                                 className="w-40 h-40 mb-8 object-contain mx-auto"
                             />
                             
@@ -310,7 +319,7 @@ const Cetak: React.FC = () => {
                          <div className="w-32 flex flex-col items-center ml-8">
                             <div className="w-28 h-36 border-2 border-dashed border-slate-400 flex items-center justify-center bg-slate-50 overflow-hidden relative shadow-sm">
                                 {selectedStudent.photoUrl ? (
-                                    <img src={selectedStudent.photoUrl} className="w-full h-full object-cover" alt="Foto Siswa" />
+                                    <img src={selectedStudent.photoUrl} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Foto Siswa" />
                                 ) : (
                                     <div className="text-center p-2 text-slate-400">
                                         <p className="text-[10px]">Tempel Foto</p>
@@ -398,15 +407,15 @@ const Cetak: React.FC = () => {
                                         </tbody>
                                     </table>
                                     
-                                    {/* Deskripsi Box */}
+                                    {/* Deskripsi Box (PLAIN TEXT RENDERER) */}
                                     <div className="border border-black p-3 bg-white shadow-sm rounded-lg mt-2 relative z-0">
                                         <p className="text-[10px] font-black text-slate-500 mb-1 tracking-widest uppercase flex items-center gap-1">
                                             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block"></span>
                                             Deskripsi Capaian
                                         </p>
-                                        <p className="text-justify text-[11px] leading-relaxed text-slate-800 font-medium">
+                                        <div className="text-justify text-[11px] leading-relaxed text-slate-800 font-medium whitespace-pre-wrap">
                                             {catResult?.generatedDescription || "-"}
-                                        </p>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -439,7 +448,8 @@ const Cetak: React.FC = () => {
                                             <tr key={c.id} className="even:bg-slate-50">
                                                 <td className="align-top font-bold text-[11px]">{c.subDimension}</td>
                                                 <td className="align-top text-justify text-[11px] leading-tight relative">
-                                                    {desc}
+                                                    {/* Plain Text with whitespace wrap */}
+                                                    <div className="whitespace-pre-wrap">{desc}</div>
                                                     {score && (
                                                         <div className="mt-1 text-right">
                                                            {getBadgeContent(score)}
@@ -471,7 +481,7 @@ const Cetak: React.FC = () => {
                              {/* CATATAN */}
                              <div>
                                  <h3 className="text-xs font-bold text-slate-900 uppercase mb-1">IV. Catatan Guru</h3>
-                                 <div className="border border-black p-2 text-[11px] text-justify min-h-[50px] rounded-lg bg-white">{studentNote?.note || "-"}</div>
+                                 <div className="border border-black p-2 text-[11px] text-justify min-h-[50px] rounded-lg bg-white whitespace-pre-wrap">{studentNote?.note || "-"}</div>
                              </div>
                          </div>
 
@@ -503,8 +513,11 @@ const Cetak: React.FC = () => {
                             <p>{settings.reportPlace}, {settings.reportDate}</p>
                             <p>Wali Kelas,</p>
                             <div className="h-20"></div>
-                            <p className="font-bold underline whitespace-nowrap">{studentClass?.teacherName || settings.teacher}</p>
-                            <p>NUPTK: {studentClass?.nuptk || '-'}</p>
+                            {/* FIX: Prioritaskan Nama Guru dari Data Kelas */}
+                            <p className="font-bold underline whitespace-nowrap">
+                                {studentClass?.teacherName ? studentClass.teacherName : settings.teacher}
+                            </p>
+                            <p>NUPTK: {studentClass?.nuptk ? studentClass.nuptk : '-'}</p>
                         </div>
                     </div>
                      <div className="mt-4 text-center text-xs" style={{ pageBreakInside: 'avoid' }}>
