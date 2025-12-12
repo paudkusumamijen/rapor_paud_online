@@ -284,13 +284,13 @@ const InputNilai: React.FC = () => {
                                             className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex justify-center items-center gap-2 text-sm"
                                         >
                                             {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Sparkles size={16}/>}
-                                            {isGenerating ? "Sedang Menyusun..." : `Susun Narasi Otomatis (${settings.aiProvider === 'gemini' ? 'Server A' : 'Server B'})`}
+                                            {isGenerating ? "Sedang Menyusun..." : `Susun Narasi Otomatis`}
                                         </button>
                                         <button 
                                             onClick={handleGenerateTemplate}
                                             className="flex-1 bg-white border border-slate-300 text-slate-700 py-2 rounded-lg font-bold hover:bg-slate-50 flex justify-center items-center gap-2 text-sm"
                                         >
-                                            Gunakan Template (Offline)
+                                            Gunakan Template
                                         </button>
                                     </div>
                                     {!settings.aiApiKey && (

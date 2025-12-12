@@ -1,9 +1,56 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, BookOpen, GraduationCap, Star, CalendarDays } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, Star, CalendarDays, TrendingUp, CheckCircle2, Circle } from 'lucide-react';
+
+// --- KOMPONEN GRAFIK DONUT SVG (Ringan & Cepat) ---
+const DonutChart: React.FC<{ percent: number; size?: number; color?: string }> = ({ 
+  percent, 
+  size = 120, 
+  color = "text-teal-500" 
+}) => {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percent / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      {/* SVG Container */}
+      <svg className="transform -rotate-90 w-full h-full">
+        {/* Background Circle (Gray) */}
+        <circle
+          cx="50%"
+          cy="50%"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="10"
+          fill="transparent"
+          className="text-slate-100"
+        />
+        {/* Progress Circle (Colored) */}
+        <circle
+          cx="50%"
+          cy="50%"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="10"
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className={`${color} transition-all duration-1000 ease-out`}
+        />
+      </svg>
+      {/* Text Percentage in Middle */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-700">
+        <span className="text-xl font-bold">{percent}%</span>
+        <span className="text-[10px] uppercase font-semibold text-slate-400">Selesai</span>
+      </div>
+    </div>
+  );
+};
 
 const Dashboard: React.FC = () => {
-  const { students, classes, tps, p5Criteria, settings } = useApp();
+  const { students, classes, tps, p5Criteria, settings, assessments } = useApp();
 
   const stats = [
     { label: "Total Siswa", value: students.length, icon: <GraduationCap size={32} />, color: "bg-blue-500" },
@@ -11,6 +58,30 @@ const Dashboard: React.FC = () => {
     { label: "Total TP", value: tps.length, icon: <BookOpen size={32} />, color: "bg-orange-500" },
     { label: "Total P5", value: p5Criteria.length, icon: <Star size={32} />, color: "bg-purple-500" },
   ];
+
+  // --- LOGIKA KALKULASI PROGRES ---
+  const getClassProgress = (classId: string) => {
+      const classStudents = students.filter(s => String(s.classId) === String(classId));
+      const totalStudents = classStudents.length;
+
+      if (totalStudents === 0) return { graded: 0, total: 0, percent: 0, notGraded: 0 };
+
+      // Hitung siswa yang memiliki SETIDAKNYA SATU nilai pada semester & tahun ajaran aktif
+      const gradedCount = classStudents.filter(s => {
+          return assessments.some(a => 
+              String(a.studentId) === String(s.id) &&
+              a.semester === settings.semester &&
+              a.academicYear === settings.academicYear
+          );
+      }).length;
+
+      return {
+          graded: gradedCount,
+          notGraded: totalStudents - gradedCount,
+          total: totalStudents,
+          percent: Math.round((gradedCount / totalStudents) * 100)
+      };
+  };
 
   return (
     <div>
@@ -36,22 +107,8 @@ const Dashboard: React.FC = () => {
          </div>
       </div>
 
-      {/* Grid Statistik */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-transform hover:-translate-y-1">
-            <div className={`${stat.color} text-white p-4 rounded-xl shadow-md`}>
-              {stat.icon}
-            </div>
-            <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">{stat.label}</p>
-              <h2 className="text-3xl font-bold text-slate-800">{stat.value}</h2>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+      {/* --- KARTU SELAMAT DATANG (DIPINDAHKAN KE SINI) --- */}
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden mb-8">
         <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-10 -translate-y-10">
             <GraduationCap size={200} />
         </div>
@@ -68,6 +125,79 @@ const Dashboard: React.FC = () => {
                  Kelola Data Siswa
              </button>
         </div>
+      </div>
+
+      {/* Grid Statistik Utama */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((stat, idx) => (
+          <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-transform hover:-translate-y-1">
+            <div className={`${stat.color} text-white p-4 rounded-xl shadow-md`}>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">{stat.label}</p>
+              <h2 className="text-3xl font-bold text-slate-800">{stat.value}</h2>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* --- SECTION GRAFIK PROGRES KELAS --- */}
+      <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="text-slate-700" size={24} />
+              <h2 className="text-xl font-bold text-slate-800">Progres Penilaian Siswa per Kelas</h2>
+          </div>
+          
+          {classes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {classes.map(cls => {
+                    const progress = getClassProgress(cls.id);
+                    // Tentukan warna berdasarkan persentase
+                    let chartColor = "text-red-500";
+                    if (progress.percent >= 50) chartColor = "text-yellow-500";
+                    if (progress.percent >= 80) chartColor = "text-teal-500";
+                    if (progress.percent === 100) chartColor = "text-green-600";
+
+                    return (
+                        <div key={cls.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800">{cls.name}</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Wali Kelas: {cls.teacherName}</p>
+                                </div>
+                                {progress.percent === 100 && <CheckCircle2 size={20} className="text-green-500" />}
+                            </div>
+                            
+                            <div className="flex items-center justify-center py-2">
+                                <DonutChart percent={progress.percent} color={chartColor} />
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center">
+                                    <span className="text-xs text-slate-400 font-semibold uppercase">Sudah Dinilai</span>
+                                    <div className="flex items-center gap-1 font-bold text-slate-700">
+                                        <div className={`w-2 h-2 rounded-full bg-current ${chartColor.replace('text-', 'bg-')}`}></div>
+                                        {progress.graded} Siswa
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center">
+                                    <span className="text-xs text-slate-400 font-semibold uppercase">Belum</span>
+                                    <div className="flex items-center gap-1 font-bold text-slate-700">
+                                        <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                                        {progress.notGraded} Siswa
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+          ) : (
+             <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-8 text-center text-slate-400">
+                 <p>Belum ada data kelas. Silakan tambahkan kelas terlebih dahulu di menu Data Kelas.</p>
+             </div>
+          )}
       </div>
     </div>
   );

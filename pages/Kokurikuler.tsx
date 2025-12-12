@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { P5Criteria, AssessmentLevel } from '../types';
 import { generateP5Description } from '../services/geminiService';
-import { Plus, Edit2, Trash2, Save, Filter, Sparkles, Loader2, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, Filter, Sparkles, Loader2, X, Archive } from 'lucide-react';
 import { LEVEL_LABELS } from '../constants';
 
 const Kokurikuler: React.FC = () => {
@@ -13,6 +13,9 @@ const Kokurikuler: React.FC = () => {
   
   // State for Criteria Management
   const [criteriaClassId, setCriteriaClassId] = useState('');
+  
+  // MODAL STATE for Criteria
+  const [isCritModalOpen, setIsCritModalOpen] = useState(false);
   const [isEditingCrit, setIsEditingCrit] = useState<string | null>(null);
   const [critForm, setCritForm] = useState<Partial<P5Criteria>>({});
   
@@ -33,6 +36,23 @@ const Kokurikuler: React.FC = () => {
   const assessmentCriteria = selectedStudent ? p5Criteria.filter(c => String(c.classId) === String(selectedStudent.classId)) : [];
   const managementCriteria = criteriaClassId ? p5Criteria.filter(c => String(c.classId) === String(criteriaClassId)) : [];
 
+  const handleOpenCritModal = (crit?: P5Criteria) => {
+    if (crit) {
+        setIsEditingCrit(crit.id);
+        setCritForm(crit);
+    } else {
+        setIsEditingCrit(null);
+        setCritForm({});
+    }
+    setIsCritModalOpen(true);
+  };
+
+  const handleCloseCritModal = () => {
+    setIsCritModalOpen(false);
+    setIsEditingCrit(null);
+    setCritForm({});
+  };
+
   const handleSaveCriteria = () => {
     if (!criteriaClassId) { alert("Pilih kelas terlebih dahulu!"); return; }
     if (!critForm.subDimension) { alert("Nama Sub Dimensi wajib diisi"); return; }
@@ -48,7 +68,7 @@ const Kokurikuler: React.FC = () => {
     if (isEditingCrit) { updateP5Criteria({ ...dataToSave, id: isEditingCrit } as P5Criteria); } 
     else { addP5Criteria({ ...dataToSave, id: Date.now().toString() } as P5Criteria); }
     
-    setCritForm({}); setIsEditingCrit(null);
+    handleCloseCritModal();
   };
 
   const handleDeleteCriteria = async (id: string) => {
@@ -69,7 +89,6 @@ const Kokurikuler: React.FC = () => {
       if (!teacherNote) { alert("Mohon isi 'Kata Kunci Kegiatan' terlebih dahulu agar untuk membuat deskripsi yang sesuai."); return; }
       setIsGenerating(true);
       try {
-          // UPDATED: Pass API Key and Provider from Settings
           const res = await generateP5Description(
               selectedStudent.name, 
               subDimension, 
@@ -84,7 +103,6 @@ const Kokurikuler: React.FC = () => {
 
   const handleGenerateTemplate = (subDimension: string) => {
       if (!selectedStudent) return;
-      // Using empty key forces offline template mode in service (if implemented for P5, otherwise basic template)
       const res = `Ananda ${selectedStudent.name} ${currentScore === 3 ? 'sangat berkembang' : currentScore === 2 ? 'berkembang sesuai harapan' : 'mulai berkembang'} dalam ${subDimension}. ${teacherNote}`;
       setDescription(res);
   };
@@ -111,48 +129,45 @@ const Kokurikuler: React.FC = () => {
         <div className="space-y-6">
              {/* Class Selector for Criteria Management */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                 <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
-                     <Filter size={16} /> Pilih Kelas untuk Mengelola Data P5
-                 </label>
-                 <select 
-                    className="w-full md:w-1/2 p-2 border rounded-lg text-slate-800 bg-white"
-                    value={criteriaClassId}
-                    onChange={e => { setCriteriaClassId(e.target.value); setIsEditingCrit(null); setCritForm({}); }}
-                 >
-                     <option value="">-- Pilih Kelas --</option>
-                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                 </select>
+                <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                     <div className="w-full md:w-1/2">
+                         <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                             <Filter size={16} /> Pilih Kelas
+                         </label>
+                         <select 
+                            className="w-full p-2.5 border rounded-lg text-slate-800 bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                            value={criteriaClassId}
+                            onChange={e => { setCriteriaClassId(e.target.value); setIsEditingCrit(null); setCritForm({}); }}
+                         >
+                             <option value="">-- Pilih Kelas --</option>
+                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                         </select>
+                     </div>
+                     {criteriaClassId && (
+                         <button 
+                            onClick={() => handleOpenCritModal()}
+                            className="bg-teal-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-teal-700 shadow-sm font-medium text-sm"
+                         >
+                             <Plus size={18}/> Tambah Sub Dimensi
+                         </button>
+                     )}
+                </div>
             </div>
 
             {criteriaClassId ? (
                 <>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">{isEditingCrit ? <Edit2 size={20}/> : <Plus size={20}/>} {isEditingCrit ? "Edit Sub Dimensi" : "Tambah Sub Dimensi P5"}</h2>
-                        <div className="space-y-4">
-                            <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Sub Dimensi / Elemen Profil Pelajar Pancasila</label><input className="w-full p-2 border rounded-lg bg-white text-slate-800" placeholder="Contoh: Mandiri, Bernalar Kritis..." value={critForm.subDimension || ''} onChange={e => setCritForm({...critForm, subDimension: e.target.value})} /></div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Deskripsi Standar (Berkembang)</label><textarea className="w-full p-2 border rounded-lg bg-white text-slate-800 text-sm" rows={2} value={critForm.descBerkembang || ''} onChange={e => setCritForm({...critForm, descBerkembang: e.target.value})} /></div>
-                                <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Deskripsi Standar (Cakap)</label><textarea className="w-full p-2 border rounded-lg bg-white text-slate-800 text-sm" rows={2} value={critForm.descCakap || ''} onChange={e => setCritForm({...critForm, descCakap: e.target.value})} /></div>
-                                <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Deskripsi Standar (Mahir)</label><textarea className="w-full p-2 border rounded-lg bg-white text-slate-800 text-sm" rows={2} value={critForm.descMahir || ''} onChange={e => setCritForm({...critForm, descMahir: e.target.value})} /></div>
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                                {isEditingCrit && <button type="button" onClick={() => { setIsEditingCrit(null); setCritForm({}); }} className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300">Batal</button>}
-                                <button type="button" onClick={handleSaveCriteria} className="bg-teal-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-teal-700"><Save size={16}/> Simpan Data</button>
-                            </div>
-                        </div>
-                    </div>
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 border-b"><tr><th className="p-4 text-slate-600 w-1/3">Sub Dimensi</th><th className="p-4 text-slate-600">Deskripsi Default</th><th className="p-4 text-slate-600 w-24 text-center">Aksi</th></tr></thead>
                             <tbody className="text-slate-700">
                                 {managementCriteria.map(c => (
                                     <tr key={c.id} className="border-b hover:bg-slate-50">
-                                        <td className="p-4 font-bold text-slate-800">{c.subDimension}</td>
-                                        <td className="p-4 text-xs text-slate-500"><div className="grid grid-cols-1 gap-1"><span className="truncate block">1. {c.descBerkembang}</span><span className="truncate block">2. {c.descCakap}</span><span className="truncate block">3. {c.descMahir}</span></div></td>
-                                        <td className="p-4"><div className="flex justify-center gap-2"><button type="button" onClick={() => { setIsEditingCrit(c.id); setCritForm(c); }} className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"><Edit2 size={16}/></button><button type="button" onClick={() => handleDeleteCriteria(c.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"><Trash2 size={16}/></button></div></td>
+                                        <td className="p-4 font-bold text-slate-800 align-top">{c.subDimension}</td>
+                                        <td className="p-4 text-xs text-slate-500 align-top"><div className="grid grid-cols-1 gap-1"><span className="block"><strong className="text-yellow-600">MB:</strong> {c.descBerkembang}</span><span className="block"><strong className="text-blue-600">BSH:</strong> {c.descCakap}</span><span className="block"><strong className="text-green-600">SB:</strong> {c.descMahir}</span></div></td>
+                                        <td className="p-4 align-top"><div className="flex justify-center gap-2"><button type="button" onClick={() => handleOpenCritModal(c)} className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"><Edit2 size={16}/></button><button type="button" onClick={() => handleDeleteCriteria(c.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100"><Trash2 size={16}/></button></div></td>
                                     </tr>
                                 ))}
-                                {managementCriteria.length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400">Belum ada data sub dimensi untuk kelas ini.</td></tr>}
+                                {managementCriteria.length === 0 && <tr><td colSpan={3} className="p-12 text-center text-slate-400 flex flex-col items-center"><Archive size={40} className="mb-2 opacity-20"/><p>Belum ada data sub dimensi untuk kelas ini.</p></td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -167,6 +182,34 @@ const Kokurikuler: React.FC = () => {
         </div>
       )}
 
+      {/* MODAL FORM CRITERIA */}
+      {isCritModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl animate-in zoom-in-95 duration-200">
+             <div className="flex justify-between items-center p-5 border-b">
+                 <h2 className="text-lg font-bold text-slate-800">{isEditingCrit ? "Edit Sub Dimensi P5" : "Tambah Sub Dimensi P5"}</h2>
+                 <button onClick={handleCloseCritModal} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
+             </div>
+             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                 <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Nama Sub Dimensi / Elemen</label>
+                     <input className="w-full p-2.5 border rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Contoh: Mandiri, Bernalar Kritis..." value={critForm.subDimension || ''} onChange={e => setCritForm({...critForm, subDimension: e.target.value})} />
+                 </div>
+                 <div className="grid grid-cols-1 gap-4">
+                     <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi Mulai Berkembang (MB)</label><textarea className="w-full p-2 border rounded-lg bg-white text-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows={2} value={critForm.descBerkembang || ''} onChange={e => setCritForm({...critForm, descBerkembang: e.target.value})} /></div>
+                     <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi Berkembang Sesuai Harapan (BSH)</label><textarea className="w-full p-2 border rounded-lg bg-white text-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows={2} value={critForm.descCakap || ''} onChange={e => setCritForm({...critForm, descCakap: e.target.value})} /></div>
+                     <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi Sangat Berkembang (SB)</label><textarea className="w-full p-2 border rounded-lg bg-white text-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows={2} value={critForm.descMahir || ''} onChange={e => setCritForm({...critForm, descMahir: e.target.value})} /></div>
+                 </div>
+             </div>
+             <div className="p-5 border-t bg-slate-50 rounded-b-xl flex justify-end gap-2">
+                 <button onClick={handleCloseCritModal} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 font-medium text-sm">Batal</button>
+                 <button onClick={handleSaveCriteria} className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 font-medium text-sm shadow-sm flex items-center gap-2"><Save size={16}/> Simpan</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Existing Assessment UI Code (Kept same logic, just indentation adjusted if needed, but structure preserved) */}
       {activeTab === 'assessment' && (
         <div className="space-y-6">
              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
