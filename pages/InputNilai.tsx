@@ -103,7 +103,7 @@ const InputNilai: React.FC = () => {
         );
         setFinalDescription(result);
     } catch (e) {
-        alert("Gagal generate deskripsi.");
+        alert("Gagal menyusun narasi.");
     } finally {
         setIsGenerating(false);
     }
@@ -169,7 +169,7 @@ const InputNilai: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <h1 className="text-2xl font-bold text-slate-800 mb-4">Input Nilai & Deskripsi AI</h1>
+      <h1 className="text-2xl font-bold text-slate-800 mb-4">Input Nilai & Deskripsi</h1>
 
       {/* Filter Section */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
@@ -265,7 +265,7 @@ const InputNilai: React.FC = () => {
 
                         {/* 2. GENERATOR AI & DESKRIPSI (TEXTAREA) */}
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Sparkles size={18} className="text-indigo-600"/> Generate Deskripsi</h3>
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Sparkles size={18} className="text-indigo-600"/> Susun Deskripsi Narasi</h3>
                             
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 {/* KOLOM KIRI: INPUT AI */}
@@ -284,7 +284,7 @@ const InputNilai: React.FC = () => {
                                             className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex justify-center items-center gap-2 text-sm"
                                         >
                                             {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Sparkles size={16}/>}
-                                            {isGenerating ? "Menyusun..." : `Gunakan AI (${settings.aiProvider === 'gemini' ? 'Google' : 'Groq'})`}
+                                            {isGenerating ? "Sedang Menyusun..." : `Susun Narasi Otomatis (${settings.aiProvider === 'gemini' ? 'Server A' : 'Server B'})`}
                                         </button>
                                         <button 
                                             onClick={handleGenerateTemplate}
@@ -295,14 +295,14 @@ const InputNilai: React.FC = () => {
                                     </div>
                                     {!settings.aiApiKey && (
                                         <p className="text-xs text-orange-600 mt-2 text-center">
-                                            *API Key belum disetting. Tombol AI mungkin tidak berfungsi, silakan gunakan Template Offline atau atur Key di Pengaturan.
+                                            *Kode Lisensi Layanan belum disetting. Gunakan Template Offline atau atur di Pengaturan.
                                         </p>
                                     )}
                                 </div>
 
                                 {/* KOLOM KANAN: DESKRIPSI TEXTAREA */}
                                 <div className="flex flex-col">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Rapor (Hasil AI & Edit)</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Rapor</label>
                                     <div className="flex-1">
                                          <textarea 
                                             value={finalDescription} 

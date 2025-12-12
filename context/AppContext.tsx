@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { AppState, ClassData, Student, LearningObjective, Assessment, CategoryResult, SchoolSettings, P5Criteria, P5Assessment, Reflection, StudentNote, AttendanceData } from '../types';
 import { INITIAL_SETTINGS } from '../constants';
@@ -57,6 +56,11 @@ interface AppContextType extends AppState {
 
   upsertNote: (data: StudentNote) => Promise<void>;
   upsertAttendance: (data: AttendanceData) => Promise<void>;
+
+  // Management System
+  handleBackup: () => void;
+  handleRestore: (file: File) => Promise<void>;
+  handleResetSystem: (keepTPs: boolean) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -154,6 +158,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.log(`Saved ${collectionName} ID: ${itemId}`);
       }
     }
+  };
+
+  // --- MANAGEMENT ACTIONS ---
+
+  const handleBackup = () => {
+      const jsonString = JSON.stringify(state, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Backup_Rapor_PAUD_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+  };
+
+  const handleRestore = async (file: File) => {
+      setIsLoading(true);
+      try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          if (!data.settings || !data.classes) throw new Error("Format file backup tidak valid.");
+          
+          if (isOnline) {
+              const res = await sheetService.restoreDatabase(data);
+              if (res.status === 'error') throw new Error(res.message);
+          }
+          
+          setState(data); // Update local state
+          alert("Data berhasil dipulihkan dari Backup!");
+          await refreshData();
+      } catch (e: any) {
+          alert("Gagal restore data: " + e.message);
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
+  const handleResetSystem = async (keepTPs: boolean) => {
+      setIsLoading(true);
+      try {
+          if (isOnline) {
+             const res = await sheetService.clearDatabase(keepTPs);
+             if (res.status === 'error') throw new Error(res.message);
+          }
+
+          // Reset Local State
+          setState(prev => ({
+              ...MOCK_DATA,
+              settings: prev.settings, // Keep Settings
+              tps: keepTPs ? prev.tps : [] // Keep TPs optional
+          }));
+          
+          alert("Sistem berhasil dikosongkan untuk Tahun Ajaran Baru!");
+          await refreshData();
+      } catch (e: any) {
+          alert("Gagal reset data: " + e.message);
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   // --- CRUD HELPERS ---
@@ -399,7 +460,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       upsertAssessment, upsertCategoryResult, setSettings,
       addP5Criteria, updateP5Criteria, deleteP5Criteria, upsertP5Assessment,
       addReflection, updateReflection, deleteReflection,
-      upsertNote, upsertAttendance
+      upsertNote, upsertAttendance,
+      handleBackup, handleRestore, handleResetSystem
     }}>
       {children}
     </AppContext.Provider>

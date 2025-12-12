@@ -27,13 +27,13 @@ const callGroqApi = async (apiKey: string, prompt: string) => {
 
         if (!response.ok) {
             const err = await response.json();
-            throw new Error(err.error?.message || "Groq API Error");
+            throw new Error(err.error?.message || "Service Error");
         }
 
         const data = await response.json();
         return data.choices?.[0]?.message?.content || "Gagal menghasilkan deskripsi.";
     } catch (error: any) {
-        throw new Error(`Groq Error: ${error.message}`);
+        throw new Error(`System Error: ${error.message}`);
     }
 };
 
@@ -49,14 +49,14 @@ const handleApiError = (error: any): string => {
     const errMsg = error.message || JSON.stringify(error);
     
     if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
-        return "⚠️ KUOTA HABIS: Batas penggunaan AI harian tercapai. Silakan coba lagi besok atau gunakan Template Offline.";
+        return "⚠️ LAYANAN SIBUK: Batas akses harian tercapai. Silakan coba lagi besok atau gunakan Mode Offline.";
     }
     
     if (errMsg.includes("API Key") || errMsg.includes("authentication") || errMsg.includes("invalid_api_key")) {
-        return "⚠️ API Key Salah/Tidak Valid. Mohon periksa kembali API Key.";
+        return "⚠️ Lisensi/Kode Akses Salah. Mohon periksa kembali konfigurasi.";
     }
 
-    return `Gagal generate: ${errMsg.substring(0, 100)}...`;
+    return `Gagal menyusun narasi: ${errMsg.substring(0, 100)}...`;
 };
 
 // --- FITUR TEMPLATE MANUAL (OFFLINE) ---
@@ -100,7 +100,7 @@ export const generateCategoryDescription = async (
   
   // Fallback ke Template Manual jika API Key tidak ada untuk Groq
   if (provider === 'groq' && !apiKey) {
-      console.warn("Groq API Key not found, using offline template.");
+      console.warn("API Key not found, using offline template.");
       return generateTemplateDescription(studentName, category, assessmentsData);
   }
   
@@ -148,7 +148,7 @@ export const generateCategoryDescription = async (
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
-        return response.text?.trim() || "Gagal menghasilkan deskripsi.";
+        return response.text?.trim() || "Gagal menyusun narasi.";
     }
   } catch (error) {
     return handleApiError(error);
@@ -201,7 +201,7 @@ export const generateP5Description = async (
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
-        return response.text?.trim() || "Gagal menghasilkan deskripsi.";
+        return response.text?.trim() || "Gagal menyusun narasi.";
     }
   } catch (error) {
     return handleApiError(error);

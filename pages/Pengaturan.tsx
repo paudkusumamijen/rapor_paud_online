@@ -3,10 +3,10 @@ import { useApp } from '../context/AppContext';
 import { SchoolSettings } from '../types';
 import { SUPABASE_URL, SUPABASE_KEY } from '../constants';
 import { resetSupabaseClient, sheetService } from '../services/sheetService';
-import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle, Cpu, ShieldCheck, Edit, Loader2 } from 'lucide-react';
+import { Save, Database, RefreshCw, Upload, Image as ImageIcon, Trash2, Lock, Flame, CheckCircle2, Sparkles, Key, AlertCircle, Cpu, ShieldCheck, Edit, Loader2, Download, RefreshCcw, FileUp } from 'lucide-react';
 
 const Pengaturan: React.FC = () => {
-  const { settings, setSettings, refreshData, isLoading, isOnline } = useApp();
+  const { settings, setSettings, refreshData, isLoading, isOnline, handleBackup, handleRestore, handleResetSystem, confirmAction } = useApp();
   const [formData, setFormData] = useState<SchoolSettings>(settings);
   
   // States for DB Config (Supabase URL/Key must still be handled locally/env as they are needed to connect)
@@ -16,6 +16,7 @@ const Pengaturan: React.FC = () => {
   const [connStatus, setConnStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
 
   // Cek apakah konfigurasi Supabase sudah ditanam (via Env Vars)
   const isHardcodedSb = !!SUPABASE_URL && !!SUPABASE_KEY;
@@ -87,6 +88,22 @@ const Pengaturan: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          handleRestore(file);
+      }
+      if (backupInputRef.current) backupInputRef.current.value = '';
+  };
+
+  const onResetClick = async () => {
+      const isConfirmed = await confirmAction("PERINGATAN BAHAYA!\n\nAnda akan menghapus SELURUH DATA SISWA, KELAS, DAN NILAI untuk memulai Tahun Ajaran Baru.\n\nData yang dihapus TIDAK BISA DIKEMBALIKAN kecuali Anda sudah melakukan BACKUP.\n\nApakah Anda yakin ingin melanjutkan?");
+      if (isConfirmed) {
+           const keepTPs = window.confirm("Apakah Anda ingin tetap menyimpan Data Tujuan Pembelajaran (TP)?\n\nKlik OK untuk Menyimpan TP.\nKlik Cancel untuk Menghapus TP juga.");
+           handleResetSystem(keepTPs);
+      }
   };
 
   const handleSaveSettings = async () => {
@@ -200,12 +217,55 @@ const Pengaturan: React.FC = () => {
 
         {/* --- KOLOM KANAN: Penandatangan & Koneksi --- */}
         <div className="space-y-6">
+            
+            {/* --- MANAJEMEN DATA (BACKUP/RESTORE) --- */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <RefreshCcw size={20} className="text-blue-500"/> Manajemen Data
+                </h2>
+                
+                <div className="space-y-4">
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-800">
+                        <p className="font-bold mb-1">Persiapan Tahun Ajaran Baru?</p>
+                        <ul className="list-disc pl-4 space-y-1">
+                            <li>Lakukan <strong>Backup Data</strong> (Download JSON) terlebih dahulu untuk arsip.</li>
+                            <li>Gunakan tombol <strong>Reset Data</strong> untuk menghapus siswa & nilai lama.</li>
+                            <li>Gunakan <strong>Restore Data</strong> jika ingin mengembalikan data lama.</li>
+                        </ul>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="flex gap-2">
+                             <button 
+                                onClick={handleBackup}
+                                className="flex-1 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 shadow-sm flex items-center justify-center gap-2"
+                             >
+                                 <Download size={16}/> Backup Data (JSON)
+                             </button>
+                             
+                             <input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreFile} />
+                             <button 
+                                onClick={() => backupInputRef.current?.click()}
+                                className="flex-1 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 shadow-sm flex items-center justify-center gap-2"
+                             >
+                                 <FileUp size={16}/> Restore Data
+                             </button>
+                        </div>
+                        
+                        <button 
+                            onClick={onResetClick}
+                            className="w-full bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-100 flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <Trash2 size={16}/> Reset Data (Tahun Ajaran Baru)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-lg font-bold text-slate-800 mb-4">Penandatangan Rapor</h2>
                 <div className="space-y-4">
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Kepala Sekolah</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.headmaster || ''} onChange={e => handleChange('headmaster', e.target.value)} /></div>
-                    
-                    {/* INPUT GURU KELAS DEFAULT DIHILANGKAN */}
                     
                     <div className="grid grid-cols-2 gap-4">
                         <div><label className="block text-sm font-medium text-slate-700 mb-1">Semester</label><input className="w-full p-2 border rounded bg-white text-slate-800" value={formData.semester || ''} onChange={e => handleChange('semester', e.target.value)} /></div>
@@ -218,12 +278,12 @@ const Pengaturan: React.FC = () => {
                 </div>
             </div>
 
-            {/* --- KONEKSI AI (DATABASE STORED) --- */}
+            {/* --- KONEKSI LAYANAN CERDAS (Database Stored) --- */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10"><Cpu size={100} /></div>
                 
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
-                    <Sparkles size={20} className="text-purple-500"/> Konfigurasi AI
+                    <Sparkles size={20} className="text-purple-500"/> Konfigurasi Layanan Penulisan
                 </h2>
                 
                 <div className="relative z-10">
@@ -236,9 +296,9 @@ const Pengaturan: React.FC = () => {
                                          <ShieldCheck size={24} />
                                      </div>
                                      <div>
-                                         <h3 className="font-bold text-green-800 text-lg">AI Siap Digunakan</h3>
+                                         <h3 className="font-bold text-green-800 text-lg">Layanan Siap Digunakan</h3>
                                          <p className="text-xs text-green-700 font-medium">
-                                             Penyedia: <span className="uppercase">{formData.aiProvider === 'gemini' ? 'Google Gemini' : 'Groq AI'}</span>
+                                             Tipe Server: <span className="uppercase">{formData.aiProvider === 'gemini' ? 'Server A (Google)' : 'Server B (Groq)'}</span>
                                          </p>
                                      </div>
                                  </div>
@@ -251,7 +311,7 @@ const Pengaturan: React.FC = () => {
                                  </button>
                              </div>
                              <p className="text-xs text-green-600 ml-12">
-                                 API Key tersimpan aman di database. Anda bisa langsung menggunakan fitur AI di menu Input Nilai.
+                                 Kunci Lisensi tersimpan aman. Fitur penulisan otomatis dapat digunakan pada menu Input Nilai.
                              </p>
                         </div>
                     ) : (
@@ -259,38 +319,38 @@ const Pengaturan: React.FC = () => {
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                             {isEditingAi && (
                                 <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-xs text-yellow-800 mb-2 flex items-center justify-between">
-                                    <span className="flex items-center gap-2"><AlertCircle size={14}/> Mode Edit Konfigurasi AI</span>
+                                    <span className="flex items-center gap-2"><AlertCircle size={14}/> Mode Edit Konfigurasi</span>
                                     <button onClick={() => setIsEditingAi(false)} className="text-slate-500 underline hover:text-slate-700">Batal</button>
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Pilih Penyedia AI</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Pilih Tipe Server</label>
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={() => setFormData(prev => ({...prev, aiProvider: 'groq'}))}
                                         className={`flex-1 py-2 px-3 rounded-lg border text-sm font-bold flex items-center justify-center gap-2 transition-all ${formData.aiProvider === 'groq' ? 'bg-orange-600 text-white border-orange-600 shadow-md' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
                                     >
-                                        <Flame size={16}/> Groq (Gratis)
+                                        <Flame size={16}/> Server B (Gratis)
                                     </button>
                                     <button 
                                         onClick={() => setFormData(prev => ({...prev, aiProvider: 'gemini'}))}
                                         className={`flex-1 py-2 px-3 rounded-lg border text-sm font-bold flex items-center justify-center gap-2 transition-all ${formData.aiProvider === 'gemini' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
                                     >
-                                        <Sparkles size={16}/> Google Gemini
+                                        <Sparkles size={16}/> Server A
                                     </button>
                                 </div>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                                    API Key {formData.aiProvider === 'groq' ? '(Dimulai dengan gsk_...)' : '(Dimulai dengan AIza...)'}
+                                    Kunci Lisensi / Kode Akses Layanan
                                 </label>
                                 <div className="relative">
                                     <Key size={14} className="absolute left-3 top-3 text-slate-400"/>
                                     <input 
                                         className="w-full p-2 pl-9 border rounded bg-white text-slate-800 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                        placeholder={formData.aiProvider === 'groq' ? "gsk_..." : "AIzaSy..."}
+                                        placeholder="Masukkan kode lisensi..."
                                         value={formData.aiApiKey || ''} 
                                         onChange={e => handleChange('aiApiKey', e.target.value)} 
                                         type="password"
@@ -299,7 +359,7 @@ const Pengaturan: React.FC = () => {
                             </div>
 
                             <div className="pt-2">
-                                <button onClick={handleSaveSettings} className="w-full bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 shadow-md">Simpan Konfigurasi AI</button>
+                                <button onClick={handleSaveSettings} className="w-full bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-900 shadow-md">Simpan Konfigurasi</button>
                             </div>
                         </div>
                     )}

@@ -58,7 +58,7 @@ const Dashboard: React.FC = () => {
         <h2 className="text-2xl font-bold mb-2 relative z-10">Selamat Datang di Aplikasi Rapor Merdeka!</h2>
         <p className="text-indigo-100 mb-6 max-w-2xl relative z-10 text-sm leading-relaxed">
           Aplikasi ini dirancang khusus untuk membantu Bapak/Ibu Guru PAUD KUSUMA dalam menyusun laporan perkembangan anak (Rapor) Kurikulum Merdeka secara efisien. 
-          Manfaatkan fitur <strong>AI Generator</strong> untuk membuat narasi deskripsi yang unik dan personal untuk setiap anak.
+          Manfaatkan <strong>Sistem Otomatis</strong> untuk membantu menyusun narasi deskripsi yang unik dan personal untuk setiap anak.
         </p>
         <div className="relative z-10 flex gap-3">
              <button onClick={() => window.location.hash = '#/nilai'} className="bg-white text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-50 shadow-sm">

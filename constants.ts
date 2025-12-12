@@ -16,8 +16,8 @@ const getEnv = (key: string) => {
 // --- KONFIGURASI DATABASE (SUPABASE) ---
 // Supabase URL & Key TIDAK BISA disimpan di dalam database itu sendiri (karena butuh kunci untuk membuka database).
 // Jadi ini tetap harus menggunakan Environment Variable atau diisi manual saat build.
-export const SUPABASE_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL') || "https://wohhrumqbuwhfulhrlfy.supabase.co";
-export const SUPABASE_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY') || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_";
+export const SUPABASE_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL') || "";
+export const SUPABASE_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY') || "";
 
 // --- KONFIGURASI AI (GEMINI / GROQ) ---
 // Kunci AI sekarang disimpan di DATABASE (Tabel Settings), jadi di sini kita kosongkan.

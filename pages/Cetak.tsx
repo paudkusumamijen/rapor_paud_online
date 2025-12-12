@@ -6,6 +6,7 @@ import { AssessmentLevel } from '../types';
 
 const Cetak: React.FC = () => {
   const { students, assessments, categoryResults, settings, classes, tps, p5Criteria, p5Assessments, reflections, notes, attendance } = useApp();
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   
   // FIX: Pastikan ID dibandingkan sebagai String untuk menghindari mismatch tipe data (number vs string)
@@ -13,6 +14,10 @@ const Cetak: React.FC = () => {
   const studentClass = classes.find(c => String(c.id) === String(selectedStudent?.classId));
 
   // Filter Data for Selected Student
+  const filteredStudents = selectedClassId 
+    ? students.filter(s => String(s.classId) === String(selectedClassId))
+    : [];
+
   const studentReflections = reflections.filter(r => String(r.studentId) === String(selectedStudentId));
   const studentNote = notes.find(n => String(n.studentId) === String(selectedStudentId));
   const studentAttendance = attendance.find(a => String(a.studentId) === String(selectedStudentId)) || { sick: 0, permission: 0, alpha: 0 };
@@ -214,14 +219,24 @@ const Cetak: React.FC = () => {
             <p className="text-sm text-slate-500">Preview ukuran kertas A4. Klik tombol cetak untuk membuka dokumen PDF.</p>
         </div>
         
-        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+        <div className="flex flex-col lg:flex-row gap-3 w-full xl:w-auto">
+             <select
+                className="p-2.5 border rounded-lg text-slate-800 bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                value={selectedClassId}
+                onChange={e => { setSelectedClassId(e.target.value); setSelectedStudentId(''); }}
+             >
+                <option value="">-- Pilih Kelas --</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+             </select>
+
              <select 
-                className="p-2.5 border rounded-lg text-slate-800 bg-white min-w-[250px] shadow-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                className="p-2.5 border rounded-lg text-slate-800 bg-white min-w-[250px] shadow-sm focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-100 disabled:text-slate-400"
                 value={selectedStudentId}
                 onChange={e => setSelectedStudentId(e.target.value)}
+                disabled={!selectedClassId}
             >
                 <option value="">-- Pilih Siswa --</option>
-                {students.map(s => (
+                {filteredStudents.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
             </select>
@@ -532,7 +547,7 @@ const Cetak: React.FC = () => {
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white m-4 rounded-xl border border-dashed border-slate-300">
             <Eye size={64} className="mb-4 text-slate-200"/>
             <p className="text-lg font-medium text-slate-500">Preview Rapor (A4)</p>
-            <p className="text-sm">Silakan pilih siswa di menu atas untuk melihat preview rapor.</p>
+            <p className="text-sm">Silakan pilih kelas dan siswa di menu atas untuk melihat preview rapor.</p>
         </div>
       )}
     </div>
