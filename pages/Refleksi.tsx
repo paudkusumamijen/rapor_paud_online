@@ -49,8 +49,8 @@ const Refleksi: React.FC = () => {
       if (!selectedStudentId) { alert("Pilih nama anak Anda terlebih dahulu."); return; }
       
       Object.entries(parentAnswers).forEach(([qId, ans]) => {
-          // Explicit cast to string to resolve 'unknown' type issue in strict mode
-          const answerText = ans as string;
+          // Explicit cast string
+          const answerText = String(ans);
           if (answerText && answerText.trim()) {
             upsertReflectionAnswer({
                 id: `${selectedStudentId}-${qId}`,
