@@ -1,27 +1,30 @@
-
-
-import { SchoolSettings, TPType } from './types';
+import { SchoolSettings, TPType } from "./types";
 
 // Helper untuk membaca Env Var dengan aman (mendukung Vite, Create-React-App, dan Vercel)
 const getEnv = (key: string) => {
   try {
     // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) return process.env[key];
+    if (typeof process !== "undefined" && process.env) return process.env[key];
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) return import.meta.env[key];
-  } catch (e) { return ""; }
+    if (typeof import.meta !== "undefined" && import.meta.env)
+      return import.meta.env[key];
+  } catch (e) {
+    return "";
+  }
   return "";
 };
 
 // --- KONFIGURASI DATABASE (SUPABASE) ---
 // Supabase URL & Key TIDAK BISA disimpan di dalam database itu sendiri (karena butuh kunci untuk membuka database).
 // Jadi ini tetap harus menggunakan Environment Variable atau diisi manual saat build.
-export const SUPABASE_URL = getEnv('REACT_APP_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL') || "https://wohhrumqbuwhfulhrlfy.supabase.co";
-export const SUPABASE_KEY = getEnv('REACT_APP_SUPABASE_KEY') || getEnv('VITE_SUPABASE_KEY') || "sb_publishable_ZSBDUUg7_lXLAKjsurs_9g_JopYWvs_";
+export const SUPABASE_URL =
+  getEnv("REACT_APP_SUPABASE_URL") || getEnv("VITE_SUPABASE_URL") || "";
+export const SUPABASE_KEY =
+  getEnv("REACT_APP_SUPABASE_KEY") || getEnv("VITE_SUPABASE_KEY") || "";
 
 // --- KONFIGURASI AI (GEMINI / GROQ) ---
 // Kunci AI sekarang disimpan di DATABASE (Tabel Settings), jadi di sini kita kosongkan.
-export const GEMINI_API_KEY = ""; 
+export const GEMINI_API_KEY = "";
 
 // -------------------------------------
 
@@ -42,10 +45,10 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   semester: "1 (Ganjil)",
   academicYear: "2024/2025",
   reportPlace: "Jakarta",
-  reportDate: new Date().toISOString().split('T')[0],
+  reportDate: new Date().toISOString().split("T")[0],
   logoUrl: "",
-  aiProvider: 'groq',
-  aiApiKey: ""
+  aiProvider: "groq",
+  aiApiKey: "",
 };
 
 export const TP_CATEGORIES = [TPType.ABP, TPType.JD, TPType.IMTAK];
@@ -53,5 +56,5 @@ export const TP_CATEGORIES = [TPType.ABP, TPType.JD, TPType.IMTAK];
 export const LEVEL_LABELS = {
   1: "Berkembang (Perlu Bimbingan)",
   2: "Cakap (Layak)",
-  3: "Mahir (Sangat Baik)"
+  3: "Mahir (Sangat Baik)",
 };
