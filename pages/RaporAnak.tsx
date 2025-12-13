@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TP_CATEGORIES } from '../constants';
-import { Printer, Eye } from 'lucide-react';
+import { Eye, BookOpen } from 'lucide-react';
 import { AssessmentLevel } from '../types';
 
-const Cetak: React.FC = () => {
+const RaporAnak: React.FC = () => {
   const { students, assessments, categoryResults, settings, classes, tps, p5Criteria, p5Assessments, notes, attendance } = useApp();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -35,139 +35,6 @@ const Cetak: React.FC = () => {
       return isClassMatch && hasAssessment;
   }) : [];
 
-  const handlePrint = () => {
-    if (!selectedStudent) { alert("Pilih siswa terlebih dahulu."); return; }
-
-    const contentElement = document.getElementById('print-area-all');
-    if (!contentElement) return;
-
-    const title = `Rapor - ${selectedStudent.name}`;
-    
-    // Buka Tab Baru
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        alert("Pop-up diblokir. Izinkan pop-up untuk mencetak.");
-        return;
-    }
-
-    let cleanHtml = contentElement.innerHTML;
-    
-    const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="id">
-        <head>
-            <meta charset="UTF-8">
-            <title>${title}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-            <style>
-                body { 
-                    font-family: 'Inter', sans-serif; 
-                    background: white; 
-                    color: black;
-                    margin: 0;
-                    padding: 0;
-                    -webkit-print-color-adjust: exact; 
-                    print-color-adjust: exact; 
-                }
-                
-                @page { 
-                    size: A4; 
-                    margin: 0; 
-                }
-
-                .sheet { 
-                    width: 210mm; 
-                    min-height: 297mm; 
-                    padding: 15mm; 
-                    margin: 0 auto; 
-                    position: relative; 
-                    box-sizing: border-box; 
-                    page-break-after: always;
-                    background: white;
-                }
-                
-                .sheet:last-child { 
-                    page-break-after: auto; 
-                }
-
-                /* --- REPORT TABLE STYLES --- */
-                .report-table {
-                    width: 100%;
-                    border-collapse: separate;
-                    border-spacing: 0;
-                    border: 1px solid #000000;
-                    border-radius: 8px; /* Lengkungan sudut */
-                    overflow: hidden;
-                    font-size: 11px;
-                    margin-bottom: 0;
-                }
-
-                .report-table th, .report-table td {
-                    border-right: 1px solid #000000;
-                    border-bottom: 1px solid #000000;
-                    padding: 6px 8px;
-                }
-
-                .report-table th {
-                    background-color: #e2e8f0 !important; /* bg-slate-200 */
-                    color: #000000 !important;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    text-align: center;
-                    border-top: none;
-                }
-
-                /* Hilangkan border ganda pada sisi kanan dan bawah tabel */
-                .report-table th:last-child, 
-                .report-table td:last-child {
-                    border-right: none;
-                }
-
-                .report-table tr:last-child td {
-                    border-bottom: none;
-                }
-
-                /* Helper classes */
-                .text-justify { text-align: justify; }
-                .font-bold { font-weight: 700; }
-                .font-black { font-weight: 900; }
-                .uppercase { text-transform: uppercase; }
-                .text-center { text-align: center; }
-                
-                .no-border-table td, .no-border-table th { border: none !important; padding: 2px 4px; }
-                
-                /* Utilities for Badges (Print Safe) */
-                .bg-yellow-200 { background-color: #fef08a !important; } 
-                .bg-green-200 { background-color: #bbf7d0 !important; }  
-                .bg-blue-200 { background-color: #bfdbfe !important; }    
-                
-                .border-yellow-400 { border-color: #facc15 !important; }
-                .border-green-400 { border-color: #4ade80 !important; }
-                .border-blue-400 { border-color: #60a5fa !important; }
-
-                /* CSS for plain text description preserving whitespace */
-                .whitespace-pre-wrap {
-                    white-space: pre-wrap;
-                }
-            </style>
-        </head>
-        <body>
-            ${cleanHtml}
-            <script>
-                // Tunggu sebentar agar gambar/font terload, lalu print
-                setTimeout(() => {
-                    window.print();
-                }, 1000);
-            </script>
-        </body>
-        </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-  };
-
   const getBadgeContent = (score: number) => {
       switch (score) {
           case 1: // BERKEMBANG
@@ -195,7 +62,7 @@ const Cetak: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* INJECT STYLES FOR PREVIEW CONSISTENCY */}
+      {/* INJECT STYLES FOR CONSISTENCY WITH PRINT LAYOUT */}
       <style>{`
         .report-table {
             width: 100%;
@@ -224,59 +91,63 @@ const Cetak: React.FC = () => {
         .report-table tr:last-child td {
             border-bottom: none;
         }
+        /* Utilities for Badges (Same as Print) */
+        .bg-yellow-200 { background-color: #fef08a; } 
+        .bg-green-200 { background-color: #bbf7d0; }  
+        .bg-blue-200 { background-color: #bfdbfe; }    
+        
+        .border-yellow-400 { border-color: #facc15; }
+        .border-green-400 { border-color: #4ade80; }
+        .border-blue-400 { border-color: #60a5fa; }
+        .whitespace-pre-wrap { white-space: pre-wrap; }
+        .no-border-table td, .no-border-table th { border: none !important; padding: 2px 4px; }
+        .sheet { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
       `}</style>
 
-      <div className="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
-        <div>
-            <h1 className="text-2xl font-bold text-slate-800">Cetak Rapor</h1>
-            <p className="text-sm text-slate-500">Preview ukuran kertas A4. Klik tombol cetak untuk membuka dokumen PDF.</p>
-        </div>
-        
-        <div className="flex flex-col lg:flex-row gap-3 w-full xl:w-auto">
-             <select
-                className="p-2.5 border rounded-lg text-slate-800 bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                value={selectedClassId}
-                onChange={e => { setSelectedClassId(e.target.value); setSelectedStudentId(''); }}
-             >
-                <option value="">-- Pilih Kelas --</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-             </select>
-
-             <select 
-                className="p-2.5 border rounded-lg text-slate-800 bg-white min-w-[250px] shadow-sm focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                value={selectedStudentId}
-                onChange={e => setSelectedStudentId(e.target.value)}
-                disabled={!selectedClassId}
-            >
-                <option value="">-- Pilih Siswa --</option>
-                {filteredStudents.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-            </select>
+      <div className="bg-indigo-600 p-6 rounded-xl shadow-lg mb-6 text-white">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><BookOpen size={28}/> Lihat Rapor Ananda</h1>
+                <p className="text-indigo-100 text-sm mt-1">Silakan pilih kelas dan nama Ananda untuk melihat hasil belajar.</p>
+            </div>
             
-            <button 
-                onClick={handlePrint} 
-                disabled={!selectedStudentId}
-                className="bg-teal-600 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-teal-700 disabled:opacity-50 transition-colors shadow-lg font-bold"
-            >
-                <Printer size={18} /> Cetak / Buka PDF
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                 <select
+                    className="p-2.5 border border-indigo-400 rounded-lg text-slate-800 bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-indigo-300 outline-none"
+                    value={selectedClassId}
+                    onChange={e => { setSelectedClassId(e.target.value); setSelectedStudentId(''); }}
+                 >
+                    <option value="">-- Pilih Kelas --</option>
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                 </select>
+
+                 <select 
+                    className="p-2.5 border border-indigo-400 rounded-lg text-slate-800 bg-white min-w-[250px] shadow-sm focus:ring-2 focus:ring-indigo-300 outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                    value={selectedStudentId}
+                    onChange={e => setSelectedStudentId(e.target.value)}
+                    disabled={!selectedClassId}
+                >
+                    <option value="">-- Pilih Nama Anak --</option>
+                    {filteredStudents.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                </select>
+            </div>
         </div>
       </div>
       
-      <div className="flex-1 bg-slate-700 overflow-auto p-8 flex justify-center rounded-xl border border-slate-600 relative shadow-inner">
+      <div className="flex-1 bg-slate-100 overflow-auto p-4 md:p-8 flex justify-center rounded-xl border border-slate-200 relative shadow-inner">
         {selectedStudent ? (
-            // WRAPPER FOR ALL PAGES
-            <div id="print-area-all" className="transform scale-[0.6] md:scale-[0.85] origin-top transition-transform">
+            // WRAPPER FOR ALL PAGES (Scaled for viewing)
+            <div id="print-area-all" className="transform scale-[0.65] md:scale-[0.85] origin-top transition-transform pb-20">
                 
                 {/* ================= SHEET 1: COVER ================= */}
-                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
+                <div className="sheet bg-white mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
                      <div className="w-full h-full border-[3px] border-double border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-between" style={{ minHeight: 'calc(297mm - 30mm)' }}>
                         <div className="mt-10 text-center">
                             <img 
                                 src={settings.logoUrl || "https://cdn-icons-png.flaticon.com/512/2997/2997300.png"} 
                                 alt="Logo Sekolah" 
-                                crossOrigin="anonymous"
                                 className="w-40 h-40 mb-8 object-contain mx-auto"
                             />
                             
@@ -312,7 +183,7 @@ const Cetak: React.FC = () => {
                 </div>
 
                 {/* ================= SHEET 2: IDENTITY ================= */}
-                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
+                <div className="sheet bg-white mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
                     <div className="text-center mb-8">
                         <div className="inline-block bg-slate-900 text-white px-6 py-1.5 rounded-full mb-4 font-bold tracking-widest uppercase text-xs">
                             PAUD MERDEKA
@@ -366,7 +237,7 @@ const Cetak: React.FC = () => {
                 </div>
 
                 {/* ================= SHEET 3: RAPOR ISI ================= */}
-                <div className="sheet bg-white shadow-2xl mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
+                <div className="sheet bg-white mb-8 mx-auto" style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}>
                     <div className="text-center mb-6">
                         <h2 className="text-md font-bold uppercase leading-tight">
                             LAPORAN HASIL PERKEMBANGAN PESERTA DIDIK<br/>
@@ -435,7 +306,7 @@ const Cetak: React.FC = () => {
                                         </tbody>
                                     </table>
                                     
-                                    {/* Deskripsi Box (PLAIN TEXT RENDERER) */}
+                                    {/* Deskripsi Box */}
                                     <div className="border border-black p-3 bg-white shadow-sm rounded-lg mt-2 relative z-0">
                                         <p className="text-[10px] font-black text-slate-500 mb-1 tracking-widest uppercase flex items-center gap-1">
                                             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block"></span>
@@ -476,7 +347,6 @@ const Cetak: React.FC = () => {
                                             <tr key={c.id} className="even:bg-slate-50">
                                                 <td className="align-top font-bold text-[11px]">{c.subDimension}</td>
                                                 <td className="align-top text-justify text-[11px] leading-tight relative">
-                                                    {/* Plain Text with whitespace wrap */}
                                                     <div className="whitespace-pre-wrap">{desc}</div>
                                                     {score && (
                                                         <div className="mt-1 text-right">
@@ -493,7 +363,7 @@ const Cetak: React.FC = () => {
                     )}
 
                     {/* III. CATATAN & IV. KEHADIRAN */}
-                    <div className="flex gap-4 mb-4" style={{ pageBreakInside: 'avoid' }}>
+                    <div className="flex gap-4 mb-4">
                          <div className="flex-1">
                              {/* CATATAN */}
                              <div>
@@ -519,7 +389,7 @@ const Cetak: React.FC = () => {
                     </div>
 
                     {/* SIGNATURES */}
-                    <div className="flex justify-between text-xs mt-8 px-4" style={{ pageBreakInside: 'avoid' }}>
+                    <div className="flex justify-between text-xs mt-8 px-4">
                         <div className="text-center w-48">
                             <p>Mengetahui,</p>
                             <p className="font-bold">Orang Tua/Wali,</p>
@@ -530,14 +400,13 @@ const Cetak: React.FC = () => {
                             <p>{settings.reportPlace}, {settings.reportDate}</p>
                             <p>Wali Kelas,</p>
                             <div className="h-20"></div>
-                            {/* FIX: Prioritaskan Nama Guru dari Data Kelas */}
                             <p className="font-bold underline whitespace-nowrap">
                                 {studentClass?.teacherName ? studentClass.teacherName : settings.teacher}
                             </p>
                             <p>NUPTK: {studentClass?.nuptk ? studentClass.nuptk : '-'}</p>
                         </div>
                     </div>
-                     <div className="mt-4 text-center text-xs" style={{ pageBreakInside: 'avoid' }}>
+                     <div className="mt-4 text-center text-xs">
                         <p>Mengetahui,</p>
                         <p>Kepala Sekolah</p>
                         <div className="h-20"></div>
@@ -546,10 +415,10 @@ const Cetak: React.FC = () => {
                 </div>
             </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white m-4 rounded-xl border border-dashed border-slate-300">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 m-4 rounded-xl border border-dashed border-slate-300">
             <Eye size={64} className="mb-4 text-slate-200"/>
-            <p className="text-lg font-medium text-slate-500">Preview Rapor (A4)</p>
-            <p className="text-sm">Silakan pilih kelas dan siswa di menu atas untuk melihat preview rapor.</p>
+            <p className="text-lg font-medium text-slate-500">Preview Rapor</p>
+            <p className="text-sm">Silakan pilih kelas dan nama anak di menu atas.</p>
         </div>
       )}
     </div>
@@ -557,4 +426,4 @@ const Cetak: React.FC = () => {
   );
 };
 
-export default Cetak;
+export default RaporAnak;

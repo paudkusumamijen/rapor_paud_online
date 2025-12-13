@@ -65,7 +65,7 @@ const DataP5: React.FC = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Data P5 (Projek Penguatan Profil Pelajar Pancasila)</h1>
+        <h1 className="text-2xl font-bold text-slate-800">Data Kokulikuler</h1>
       </div>
 
       <div className="space-y-6">
@@ -81,7 +81,7 @@ const DataP5: React.FC = () => {
                             value={selectedClassId}
                             onChange={e => { setSelectedClassId(e.target.value); }}
                          >
-                             <option value="">-- Pilih Kelas untuk Mengelola Data P5 --</option>
+                             <option value="">-- Pilih Kelas untuk Mengelola Data Kokulikuler --</option>
                              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                          </select>
                      </div>
@@ -118,7 +118,7 @@ const DataP5: React.FC = () => {
                 <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400">
                      <Filter size={48} className="mb-4 opacity-30"/>
                      <p className="text-lg font-medium">Pilih Kelas Terlebih Dahulu</p>
-                     <p className="text-sm">Anda harus memilih kelas untuk melihat atau menambah data P5.</p>
+                     <p className="text-sm">Anda harus memilih kelas untuk melihat atau menambah data Kokulikuler.</p>
                 </div>
             )}
       </div>
@@ -128,7 +128,7 @@ const DataP5: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl animate-in zoom-in-95 duration-200">
              <div className="flex justify-between items-center p-5 border-b">
-                 <h2 className="text-lg font-bold text-slate-800">{isEditing ? "Edit Sub Dimensi P5" : "Tambah Sub Dimensi P5"}</h2>
+                 <h2 className="text-lg font-bold text-slate-800">{isEditing ? "Edit Sub Dimensi Kokulikuler" : "Tambah Sub Dimensi Kokulikuler"}</h2>
                  <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
              </div>
              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">

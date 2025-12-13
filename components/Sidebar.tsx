@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { key: 'kelas', to: "/kelas", icon: <Users size={18} />, label: "Data Kelas" },
         { key: 'siswa', to: "/siswa", icon: <GraduationCap size={18} />, label: "Data Siswa" },
         { key: 'tp', to: "/tp", icon: <BookOpen size={18} />, label: "Input TP" },
-        { key: 'data_p5', to: "/data-p5", icon: <Star size={18} />, label: "Data P5 (Projek)" },
+        { key: 'data_p5', to: "/data-p5", icon: <Star size={18} />, label: "Kokulikuler" },
       ]
     },
     {
@@ -64,8 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: <ClipboardList size={20} />,
       children: [
         { key: 'input_nilai', to: "/nilai", icon: <PenTool size={18} />, label: "Nilai Intrakurikuler" },
-        { key: 'nilai_p5', to: "/nilai-p5", icon: <Star size={18} />, label: "Nilai P5 (Projek)" },
-        { key: 'refleksi', to: "/refleksi", icon: <MessageCircle size={18} />, label: "Refleksi Ortu" },
+        { key: 'nilai_p5', to: "/nilai-p5", icon: <Star size={18} />, label: "Nilai Kokulikuler" },
+        // { key: 'refleksi', to: "/refleksi", icon: <MessageCircle size={18} />, label: "Refleksi Ortu" },
         { key: 'catatan', to: "/catatan", icon: <FileText size={18} />, label: "Catatan Anak" },
         { key: 'kehadiran', to: "/kehadiran", icon: <CalendarCheck size={18} />, label: "Kehadiran" },
       ]
@@ -107,7 +107,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   // Custom Menu for Orang Tua
   const parentMenu: MenuItem[] = [
-      { key: 'refleksi_ortu', to: "/refleksi", icon: <MessageCircle size={20} />, label: "Refleksi Orang Tua" }
+      // { key: 'refleksi_ortu', to: "/refleksi", icon: <MessageCircle size={20} />, label: "Refleksi Orang Tua" },
+      { key: 'rapor_anak', to: "/rapor-anak", icon: <BookOpen size={20} />, label: "Lihat Rapor Ananda" }
   ];
 
   const finalMenu = user?.role === 'orangtua' ? parentMenu : filteredMenu;

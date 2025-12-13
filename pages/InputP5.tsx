@@ -79,7 +79,7 @@ export default function InputP5() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Input Nilai Projek (P5)</h1>
+        <h1 className="text-2xl font-bold text-slate-800">Input Nilai Kokulikuler</h1>
       </div>
 
       <div className="space-y-6">
@@ -118,7 +118,7 @@ export default function InputP5() {
              {selectedStudentId ? (
                  <div className="space-y-4">
                     <h3 className="font-bold text-lg text-slate-800 border-b pb-2">
-                        Daftar Sub Dimensi P5 ({classes.find(c => c.id === selectedClassId)?.name})
+                        Daftar Sub Dimensi Kokulikuler ({classes.find(c => c.id === selectedClassId)?.name})
                     </h3>
                     
                     {assessmentCriteria.length > 0 ? (
@@ -243,7 +243,7 @@ export default function InputP5() {
                     ) : ( 
                         <div className="text-center p-8 bg-orange-50 rounded-xl border border-orange-200">
                             <p className="text-orange-800 font-medium">Belum ada data Sub Dimensi untuk kelas ini.</p>
-                            <p className="text-sm mt-2 text-orange-600">Silakan masuk ke menu "Data Master Data P5" untuk menambahkan data.</p>
+                            <p className="text-sm mt-2 text-orange-600">Silakan masuk ke menu "Data Master Data Kokulikuler" untuk menambahkan data.</p>
                         </div> 
                     )}
                  </div>

@@ -13,6 +13,7 @@ import Refleksi from './pages/Refleksi';
 import Catatan from './pages/Catatan';
 import Kehadiran from './pages/Kehadiran';
 import Cetak from './pages/Cetak';
+import RaporAnak from './pages/RaporAnak';
 import Pengaturan from './pages/Pengaturan';
 import Login from './pages/Login';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -39,7 +40,7 @@ const AppContent: React.FC = () => {
       <Layout>
         <Routes>
           {/* LOGIC CHANGE: Jika role orangtua, redirect ke /refleksi, jika tidak ke Dashboard */}
-          <Route path="/" element={user.role === 'orangtua' ? <Navigate to="/refleksi" replace /> : <Dashboard />} />
+          <Route path="/" element={user.role === 'orangtua' ? <Navigate to="/rapor-anak" replace /> : <Dashboard />} />
           
           {/* Protected Routes for ADMIN ONLY */}
           {user.role === 'admin' && (
@@ -59,6 +60,7 @@ const AppContent: React.FC = () => {
           <Route path="/catatan" element={<Catatan />} />
           <Route path="/kehadiran" element={<Kehadiran />} />
           <Route path="/cetak" element={<Cetak />} />
+          <Route path="/rapor-anak" element={<RaporAnak />} />
           
           {/* Redirect unauthorized access to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
