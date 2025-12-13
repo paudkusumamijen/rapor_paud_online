@@ -49,7 +49,6 @@ const Refleksi: React.FC = () => {
       if (!selectedStudentId) { alert("Pilih nama anak Anda terlebih dahulu."); return; }
       
       Object.entries(parentAnswers).forEach(([qId, ans]) => {
-          // Explicit cast string
           const answerText = String(ans);
           if (answerText && answerText.trim()) {
             upsertReflectionAnswer({
@@ -203,7 +202,7 @@ const Refleksi: React.FC = () => {
                                              <p className="text-sm font-bold text-slate-700 mb-1">{q.question}</p>
                                              <p className="text-sm text-slate-600 italic bg-white p-2 rounded border border-slate-200">"{ans?.answer || 'Belum dijawab'}"</p>
                                          </div>
-                                     )
+                                     );
                                  })}
                              </div>
                         )}
