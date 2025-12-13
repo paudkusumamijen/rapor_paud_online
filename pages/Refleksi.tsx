@@ -1,195 +1,234 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Reflection } from '../types';
-import { Plus, Trash2, Save, Filter, X, Edit2, MessageCircle } from 'lucide-react';
+import { ReflectionQuestion, ReflectionAnswer } from '../types';
+import { Plus, Trash2, Save, Filter, X, MessageCircle, User, CheckCircle2 } from 'lucide-react';
 
 const Refleksi: React.FC = () => {
-  const { students, classes, reflections, addReflection, updateReflection, deleteReflection, confirmAction } = useApp();
+  const { 
+    user, students, classes, 
+    reflectionQuestions, reflectionAnswers, 
+    addReflectionQuestion, deleteReflectionQuestion, upsertReflectionAnswer, 
+    confirmAction 
+  } = useApp();
   
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   
-  // MODAL STATE
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
+  // TEACHER: State for adding new question
+  const [newQuestion, setNewQuestion] = useState('');
 
+  // PARENT: State for answers
+  const [parentAnswers, setParentAnswers] = useState<Record<string, string>>({});
+
+  // Filters
   const filteredStudents = selectedClassId 
     ? students.filter(s => String(s.classId) === String(selectedClassId))
     : [];
 
-  const studentReflections = reflections.filter(r => String(r.studentId) === String(selectedStudentId));
+  // Data Logic
+  const classQuestions = reflectionQuestions.filter(q => String(q.classId) === String(selectedClassId));
 
-  const handleOpenModal = (r?: Reflection) => {
-    if (r) {
-        setIsEditing(r.id);
-        setQuestion(r.question);
-        setAnswer(r.answer);
-    } else {
-        setIsEditing(null);
-        setQuestion('');
-        setAnswer('');
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-      setIsModalOpen(false);
-      setIsEditing(null);
-  };
-
-  const handleSave = () => {
-    if (!question || !answer) return alert("Pertanyaan dan Jawaban harus diisi");
+  // --- TEACHER ACTIONS ---
+  const handleAddQuestion = () => {
+    if (!selectedClassId) { alert("Pilih kelas dulu!"); return; }
+    if (!newQuestion) { alert("Tuliskan pertanyaan!"); return; }
     
-    if (isEditing) {
-        // Find existing to preserve other fields if any, though here we just have simple fields
-        const existing = studentReflections.find(r => r.id === isEditing);
-        if (existing) {
-            updateReflection({ ...existing, question, answer });
-        }
-    } else {
-        addReflection({
-            id: Date.now().toString(),
-            studentId: selectedStudentId,
-            question,
-            answer
-        });
-    }
-    handleCloseModal();
+    addReflectionQuestion({
+        id: Date.now().toString(),
+        classId: selectedClassId,
+        question: newQuestion,
+        active: true
+    });
+    setNewQuestion('');
   };
 
-  const handleDelete = async (id: string) => {
-    const isConfirmed = await confirmAction("Apakah Anda yakin ingin menghapus Refleksi ini?");
+  const handleDeleteQuestion = async (id: string) => {
+    const isConfirmed = await confirmAction("Hapus pertanyaan ini? Jawaban orang tua yang sudah ada mungkin akan ikut terhapus.");
     if (isConfirmed) {
-        deleteReflection(String(id));
+        deleteReflectionQuestion(id);
     }
   };
+
+  // --- PARENT ACTIONS ---
+  const handleAnswerChange = (qId: string, val: string) => {
+      setParentAnswers(prev => ({ ...prev, [qId]: val }));
+  };
+
+  const handleParentSave = () => {
+      if (!selectedStudentId) { alert("Pilih nama anak Anda terlebih dahulu."); return; }
+      
+      Object.entries(parentAnswers).forEach(([qId, ans]) => {
+          if (ans.trim()) {
+            upsertReflectionAnswer({
+                id: `${selectedStudentId}-${qId}`,
+                questionId: qId,
+                studentId: selectedStudentId,
+                answer: ans
+            });
+          }
+      });
+      alert("Jawaban refleksi berhasil disimpan! Terima kasih Bunda/Ayah.");
+  };
+
+  // Load existing answers when student is selected
+  const handleStudentSelect = (studentId: string) => {
+      setSelectedStudentId(studentId);
+      const existing = reflectionAnswers.filter(a => String(a.studentId) === String(studentId));
+      const map: Record<string, string> = {};
+      existing.forEach(a => {
+          map[a.questionId] = a.answer;
+      });
+      setParentAnswers(map);
+  };
+
+  // --- RENDER TEACHER VIEW ---
+  const renderTeacherView = () => (
+    <div className="space-y-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+             <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><Filter size={20}/> Pilih Kelas</h2>
+             <select className="w-full md:w-1/2 p-2.5 border rounded-lg bg-white text-slate-800" value={selectedClassId} onChange={e => { setSelectedClassId(e.target.value); setSelectedStudentId(''); }}>
+                <option value="">-- Pilih Kelas --</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+        </div>
+
+        {selectedClassId && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 className="text-lg font-bold text-slate-800 mb-4">Daftar Pertanyaan Refleksi ({classes.find(c => c.id === selectedClassId)?.name})</h2>
+                
+                {/* Add New Question */}
+                <div className="flex gap-2 mb-6">
+                    <input 
+                        className="flex-1 p-3 border rounded-lg bg-slate-50 text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+                        placeholder="Tuliskan pertanyaan baru untuk orang tua di kelas ini..."
+                        value={newQuestion}
+                        onChange={e => setNewQuestion(e.target.value)}
+                    />
+                    <button onClick={handleAddQuestion} className="bg-teal-600 text-white px-6 rounded-lg font-bold hover:bg-teal-700 flex items-center gap-2"><Plus size={18}/> Tambah</button>
+                </div>
+
+                {/* List Questions */}
+                <div className="space-y-3">
+                    {classQuestions.length > 0 ? classQuestions.map((q, idx) => (
+                        <div key={q.id} className="p-4 border rounded-xl flex justify-between items-center hover:bg-slate-50 transition-colors">
+                            <div className="flex gap-3">
+                                <span className="font-bold text-slate-400">{idx + 1}.</span>
+                                <span className="font-medium text-slate-800">{q.question}</span>
+                            </div>
+                            <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"><Trash2 size={18}/></button>
+                        </div>
+                    )) : (
+                        <div className="text-center p-8 text-slate-400 bg-slate-50 border border-dashed rounded-lg">Belum ada pertanyaan untuk kelas ini.</div>
+                    )}
+                </div>
+
+                {/* Preview Answers */}
+                <div className="mt-8 pt-8 border-t">
+                    <h3 className="text-md font-bold text-slate-700 mb-4">Lihat Jawaban Orang Tua</h3>
+                    <select className="w-full md:w-1/3 p-2 border rounded-lg bg-white text-slate-800 mb-4" value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)}>
+                        <option value="">-- Pilih Nama Siswa --</option>
+                        {filteredStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    
+                    {selectedStudentId && (
+                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                             {classQuestions.map(q => {
+                                 const ans = reflectionAnswers.find(a => String(a.questionId) === String(q.id) && String(a.studentId) === String(selectedStudentId));
+                                 return (
+                                     <div key={q.id} className="mb-4 last:mb-0">
+                                         <p className="text-sm font-bold text-slate-700 mb-1">{q.question}</p>
+                                         <p className="text-sm text-slate-600 italic bg-white p-2 rounded border border-slate-200">"{ans?.answer || 'Belum dijawab'}"</p>
+                                     </div>
+                                 )
+                             })}
+                         </div>
+                    )}
+                </div>
+            </div>
+        )}
+    </div>
+  );
+
+  // --- RENDER PARENT VIEW ---
+  const renderParentView = () => (
+    <div className="max-w-2xl mx-auto">
+         <div className="bg-indigo-600 text-white p-6 rounded-t-xl shadow-lg mb-6">
+             <h2 className="text-2xl font-bold flex items-center gap-2"><MessageCircle size={28}/> Refleksi Orang Tua</h2>
+             <p className="text-indigo-100 mt-2">Mohon kesediaan Ayah/Bunda untuk menjawab beberapa pertanyaan terkait perkembangan Ananda.</p>
+         </div>
+
+         <div className="space-y-6">
+            {/* Step 1: Identity */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 className="font-bold text-slate-800 mb-4 border-b pb-2">1. Identitas Anak</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Kelas Ananda</label>
+                        <select className="w-full p-3 border rounded-lg bg-white text-slate-800" value={selectedClassId} onChange={e => { setSelectedClassId(e.target.value); setSelectedStudentId(''); }}>
+                            <option value="">-- Pilih Kelas --</option>
+                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Nama Ananda</label>
+                        <select className="w-full p-3 border rounded-lg bg-white text-slate-800 disabled:bg-slate-100" value={selectedStudentId} onChange={e => handleStudentSelect(e.target.value)} disabled={!selectedClassId}>
+                            <option value="">-- Cari Nama Anak --</option>
+                            {filteredStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Step 2: Questions */}
+            {selectedStudentId && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in slide-in-from-bottom-4 duration-500">
+                    <h3 className="font-bold text-slate-800 mb-6 border-b pb-2">2. Pertanyaan Refleksi</h3>
+                    
+                    {classQuestions.length > 0 ? (
+                        <div className="space-y-6">
+                            {classQuestions.map((q, idx) => (
+                                <div key={q.id}>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        {idx + 1}. {q.question}
+                                    </label>
+                                    <textarea 
+                                        className="w-full p-3 border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                                        rows={3}
+                                        placeholder="Tuliskan jawaban Ayah/Bunda disini..."
+                                        value={parentAnswers[q.id] || ''}
+                                        onChange={e => handleAnswerChange(q.id, e.target.value)}
+                                    />
+                                </div>
+                            ))}
+                            
+                            <div className="pt-4 flex justify-end">
+                                <button onClick={handleParentSave} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg flex items-center gap-2 transform active:scale-95 transition-all">
+                                    <Save size={20}/> Simpan Jawaban
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center p-8 bg-slate-50 rounded-lg text-slate-500">
+                            <CheckCircle2 size={40} className="mx-auto mb-2 text-green-500"/>
+                            <p>Belum ada pertanyaan refleksi dari Guru untuk kelas ini.</p>
+                        </div>
+                    )}
+                </div>
+            )}
+         </div>
+    </div>
+  );
 
   return (
     <div>
-       <div className="flex justify-between items-center mb-6">
-           <h1 className="text-2xl font-bold text-slate-800">Refleksi Orang Tua</h1>
-       </div>
-       
-       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Filter Kelas</label>
-                    <select className="w-full p-2 border rounded-lg bg-white text-slate-800" value={selectedClassId} onChange={e => { setSelectedClassId(e.target.value); setSelectedStudentId(''); }}>
-                        <option value="">-- Pilih Kelas --</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Pilih Siswa</label>
-                    <select 
-                        className="w-full p-2 border rounded-lg bg-white text-slate-800 disabled:bg-slate-100" 
-                        value={selectedStudentId} 
-                        onChange={e => setSelectedStudentId(e.target.value)}
-                        disabled={!selectedClassId}
-                    >
-                        <option value="">-- Pilih Siswa --</option>
-                        {filteredStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                </div>
-            </div>
-       </div>
-
-       {selectedStudentId ? (
-           <div className="space-y-4">
-               {studentReflections.length > 0 ? (
-                   studentReflections.map(r => (
-                       <div key={r.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-start">
-                           <div className="flex-1 space-y-2">
-                               <div>
-                                   <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide">Pertanyaan Refleksi</span>
-                                   <p className="font-medium text-slate-800">{r.question}</p>
-                               </div>
-                               <div>
-                                   <span className="text-xs font-bold text-teal-600 uppercase tracking-wide">Jawaban Orang Tua</span>
-                                   <p className="text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-100">"{r.answer}"</p>
-                               </div>
-                           </div>
-                           <div className="flex gap-2 self-end md:self-start">
-                               <button 
-                                    onClick={() => handleOpenModal(r)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                    title="Edit"
-                               >
-                                   <Edit2 size={18}/>
-                               </button>
-                               <button 
-                                    onClick={() => handleDelete(r.id)} 
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                    title="Hapus"
-                               >
-                                    <Trash2 size={18}/>
-                               </button>
-                           </div>
-                       </div>
-                   ))
-               ) : (
-                   <div className="text-center p-8 text-slate-400 bg-slate-50 rounded-xl border border-dashed">
-                       <MessageCircle size={32} className="mx-auto mb-2 opacity-30"/>
-                       <p>Belum ada data refleksi untuk siswa ini.</p>
-                   </div>
-               )}
-               
-               <button 
-                    onClick={() => handleOpenModal()} 
-                    className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-indigo-400 hover:text-indigo-600 flex items-center justify-center gap-2 font-bold transition-all bg-slate-50 hover:bg-white"
-                >
-                    <Plus size={20}/> Tambah Refleksi Baru
-                </button>
-           </div>
-       ) : (
-          <div className="text-center p-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-             <Filter size={48} className="mx-auto mb-4 opacity-20 text-slate-400"/>
-             <p className="text-slate-400 font-medium">Silakan pilih siswa terlebih dahulu untuk melihat dan menambah Refleksi.</p>
-          </div>
+       {user?.role === 'orangtua' ? renderParentView() : (
+           <>
+             <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-slate-800">Manajemen Refleksi Orang Tua</h1>
+             </div>
+             {renderTeacherView()}
+           </>
        )}
-
-       {/* MODAL FORM */}
-       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-5 border-b">
-              <h2 className="text-lg font-bold text-slate-800">{isEditing ? "Edit Refleksi" : "Tambah Refleksi Baru"}</h2>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Pertanyaan Refleksi</label>
-                <input 
-                    className="w-full p-3 border rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none"
-                    placeholder="Contoh: Apa yang paling disukai ananda di sekolah?"
-                    value={question}
-                    onChange={e => setQuestion(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Jawaban Orang Tua</label>
-                <textarea 
-                    className="w-full p-3 border rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none"
-                    rows={4}
-                    placeholder="Tuliskan jawaban dari orang tua..."
-                    value={answer}
-                    onChange={e => setAnswer(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="p-5 border-t bg-slate-50 rounded-b-xl flex justify-end gap-2">
-                <button onClick={handleCloseModal} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 font-medium text-sm">Batal</button>
-                <button onClick={handleSave} className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 font-medium text-sm shadow-sm flex items-center gap-2">
-                    <Save size={16} /> Simpan
-                </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

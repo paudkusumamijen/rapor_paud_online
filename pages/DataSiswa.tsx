@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Student } from '../types';
-import { Trash2, Edit2, Plus, X, Camera, User, Download, Upload, FileSpreadsheet, Filter, Loader2 } from 'lucide-react';
+import { Trash2, Edit2, Plus, X, Camera, User, Download, Upload, FileSpreadsheet, Filter, Loader2, Users, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { sheetService } from '../services/sheetService';
 
@@ -11,7 +11,11 @@ const DataSiswa: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Student>>({});
   
+  // -- STATE FILTER, SEARCH, & PAGINATION --
   const [filterClassId, setFilterClassId] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
   
   // State upload
   const [isUploading, setIsUploading] = useState(false);
@@ -19,9 +23,36 @@ const DataSiswa: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredStudents = filterClassId 
-    ? students.filter(s => String(s.classId) === String(filterClassId))
-    : [];
+  // -- FILTERING LOGIC --
+  const filteredStudents = students.filter(student => {
+      // 1. Filter by Class
+      if (filterClassId && String(student.classId) !== String(filterClassId)) return false;
+      
+      // Jika kelas belum dipilih, jangan tampilkan apa-apa (opsional, sesuai UX sebelumnya)
+      if (!filterClassId) return false;
+
+      // 2. Filter by Search Term
+      if (searchTerm) {
+          const lowerTerm = searchTerm.toLowerCase();
+          return (
+              student.name.toLowerCase().includes(lowerTerm) ||
+              student.nisn.includes(lowerTerm)
+          );
+      }
+      return true;
+  });
+
+  // -- PAGINATION LOGIC --
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const paginatedStudents = filteredStudents.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+  );
+
+  // Reset page when filter changes
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [filterClassId, searchTerm]);
 
   const openModal = (student?: Student) => {
     if (student) {
@@ -165,15 +196,42 @@ const DataSiswa: React.FC = () => {
     <div>
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div>
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">Data Siswa</h1>
-            <div className="flex items-center gap-2">
-                <Filter size={18} className="text-slate-500" />
-                <select className="p-2 border border-slate-300 rounded-lg text-slate-800 bg-white min-w-[200px] focus:ring-2 focus:ring-teal-500 outline-none" value={filterClassId} onChange={(e) => setFilterClassId(e.target.value)}>
-                    <option value="">-- Pilih Kelas untuk Menampilkan Data --</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+            <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold text-slate-800">Data Siswa</h1>
+                {filterClassId && (
+                  <div className="bg-teal-100 border border-teal-200 text-teal-800 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 animate-in fade-in">
+                    <Users size={12} />
+                    {filteredStudents.length} Siswa
+                  </div>
+                )}
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-3">
+                {/* FILTER KELAS */}
+                <div className="flex items-center gap-2">
+                    <Filter size={18} className="text-slate-500" />
+                    <select className="p-2 border border-slate-300 rounded-lg text-slate-800 bg-white min-w-[200px] focus:ring-2 focus:ring-teal-500 outline-none shadow-sm" value={filterClassId} onChange={(e) => setFilterClassId(e.target.value)}>
+                        <option value="">-- Pilih Kelas --</option>
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                </div>
+
+                {/* SEARCH BAR */}
+                {filterClassId && (
+                    <div className="relative">
+                        <Search size={18} className="absolute left-3 top-2.5 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Cari Nama / NISN..." 
+                            className="pl-9 p-2 border border-slate-300 rounded-lg text-slate-800 bg-white min-w-[200px] focus:ring-2 focus:ring-teal-500 outline-none shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                )}
             </div>
         </div>
+
         <div className="flex flex-wrap gap-2">
              <button type="button" onClick={() => openModal()} className="bg-teal-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-teal-700 text-sm shadow-sm"><Plus size={16} /> Tambah Siswa</button>
              <button type="button" onClick={handleExportXLSX} className="bg-indigo-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 text-sm shadow-sm"><FileSpreadsheet size={16} /> Export XLS</button>
@@ -182,49 +240,104 @@ const DataSiswa: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto min-h-[300px]">
-        <table className="w-full text-left text-sm min-w-max">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="p-4 font-semibold text-slate-600">Foto</th>
-              <th className="p-4 font-semibold text-slate-600">NISN</th>
-              <th className="p-4 font-semibold text-slate-600">Nama Siswa</th>
-              <th className="p-4 font-semibold text-slate-600">Kelas</th>
-              <th className="p-4 font-semibold text-slate-600">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="text-slate-700">
-            {!filterClassId ? (
-                 <tr><td colSpan={5} className="p-12 text-center text-slate-400">Silakan Pilih Kelas Terlebih Dahulu</td></tr>
-            ) : filteredStudents.length === 0 ? (
-                <tr><td colSpan={5} className="p-12 text-center text-slate-400">Belum ada data siswa.</td></tr>
-            ) : (
-                filteredStudents.map((student) => {
-                    const cls = classes.find(c => c.id === student.classId);
-                    return (
-                        <tr key={student.id} className="border-b hover:bg-slate-50">
-                            <td className="p-4">
-                                <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center border border-slate-300">
-                                    {student.photoUrl ? (
-                                        <img src={student.photoUrl} alt={student.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User size={20} className="text-slate-400" />
-                                    )}
-                                </div>
-                            </td>
-                            <td className="p-4">{student.nisn}</td>
-                            <td className="p-4 font-medium text-slate-900">{student.name}</td>
-                            <td className="p-4">{cls?.name || '-'}</td>
-                            <td className="p-4 flex gap-2">
-                            <button type="button" onClick={() => openModal(student)} className="p-2 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={16}/></button>
-                            <button type="button" onClick={() => handleDelete(String(student.id))} className="p-2 text-red-600 hover:bg-red-50 rounded" title="Hapus Siswa"><Trash2 size={16}/></button>
-                            </td>
-                        </tr>
-                    );
-                })
-            )}
-          </tbody>
-        </table>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[400px]">
+        <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left text-sm min-w-max">
+            <thead className="bg-slate-50 border-b">
+                <tr>
+                <th className="p-4 font-semibold text-slate-600 text-center w-16">No</th>
+                <th className="p-4 font-semibold text-slate-600 w-20 text-center">Foto</th>
+                <th className="p-4 font-semibold text-slate-600">NISN</th>
+                <th className="p-4 font-semibold text-slate-600">Nama Siswa</th>
+                <th className="p-4 font-semibold text-slate-600">Kelas</th>
+                <th className="p-4 font-semibold text-slate-600 text-right">Aksi</th>
+                </tr>
+            </thead>
+            <tbody className="text-slate-700">
+                {!filterClassId ? (
+                    <tr><td colSpan={6} className="p-12 text-center text-slate-400">Silakan Pilih Kelas Terlebih Dahulu</td></tr>
+                ) : paginatedStudents.length === 0 ? (
+                    <tr><td colSpan={6} className="p-12 text-center text-slate-400">
+                        {searchTerm ? 'Tidak ditemukan data siswa dengan kata kunci tersebut.' : 'Belum ada data siswa di kelas ini.'}
+                    </td></tr>
+                ) : (
+                    paginatedStudents.map((student, index) => {
+                        const cls = classes.find(c => c.id === student.classId);
+                        const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
+                        return (
+                            <tr key={student.id} className="border-b hover:bg-slate-50 last:border-b-0">
+                                <td className="p-4 text-center text-slate-500">{rowNumber}</td>
+                                <td className="p-4">
+                                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center border border-slate-300 mx-auto">
+                                        {student.photoUrl ? (
+                                            <img src={student.photoUrl} alt={student.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={20} className="text-slate-400" />
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="p-4 font-mono text-xs">{student.nisn}</td>
+                                <td className="p-4 font-bold text-slate-800">{student.name}</td>
+                                <td className="p-4 text-xs">
+                                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 font-medium">
+                                        {cls?.name || '-'}
+                                    </span>
+                                </td>
+                                <td className="p-4">
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => openModal(student)} className="p-2 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 transition-colors" title="Edit">
+                                            <Edit2 size={16}/>
+                                        </button>
+                                        <button type="button" onClick={() => handleDelete(String(student.id))} className="p-2 text-red-600 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-colors" title="Hapus">
+                                            <Trash2 size={16}/>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })
+                )}
+            </tbody>
+            </table>
+        </div>
+
+        {/* PAGINATION CONTROLS */}
+        {filterClassId && paginatedStudents.length > 0 && (
+            <div className="p-4 border-t bg-slate-50 flex items-center justify-between">
+                <div className="text-sm text-slate-500">
+                    Menampilkan <span className="font-bold">{((currentPage - 1) * itemsPerPage) + 1}</span> sampai <span className="font-bold">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> dari <span className="font-bold">{filteredStudents.length}</span> data
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${
+                                currentPage === page 
+                                ? 'bg-teal-600 text-white border border-teal-600' 
+                                : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-100'
+                            }`}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                    <button 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            </div>
+        )}
       </div>
 
       {isModalOpen && (

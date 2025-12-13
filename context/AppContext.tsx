@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { AppState, ClassData, Student, LearningObjective, Assessment, CategoryResult, SchoolSettings, P5Criteria, P5Assessment, Reflection, StudentNote, AttendanceData } from '../types';
+import { AppState, ClassData, Student, LearningObjective, Assessment, CategoryResult, SchoolSettings, P5Criteria, P5Assessment, Reflection, ReflectionQuestion, ReflectionAnswer, StudentNote, AttendanceData, User, UserRole } from '../types';
 import { INITIAL_SETTINGS } from '../constants';
 import { sheetService } from '../services/sheetService';
 
 const MOCK_DATA: AppState = {
+  user: null,
   classes: [],
   students: [],
   tps: [],
@@ -13,6 +14,8 @@ const MOCK_DATA: AppState = {
   p5Criteria: [],
   p5Assessments: [],
   reflections: [],
+  reflectionQuestions: [],
+  reflectionAnswers: [],
   notes: [],
   attendance: []
 };
@@ -22,9 +25,17 @@ interface AppContextType extends AppState {
   isOnline: boolean;
   refreshData: () => Promise<void>;
   
-  confirmAction: (message: string) => Promise<boolean>;
+  // Auth
+  login: (username: string, pass: string) => boolean;
+  logout: () => void;
+
+  // Confirmation Modal
+  confirmAction: (message: string, title?: string, confirmText?: string, variant?: 'danger' | 'primary' | 'logout') => Promise<boolean>;
   isConfirmModalOpen: boolean;
   confirmModalMessage: string;
+  confirmModalTitle: string;
+  confirmModalBtnText: string;
+  confirmModalVariant: 'danger' | 'primary' | 'logout';
   handleConfirmModalConfirm: () => void;
   handleConfirmModalCancel: () => void;
 
@@ -53,6 +64,11 @@ interface AppContextType extends AppState {
   addReflection: (data: Reflection) => Promise<void>;
   updateReflection: (data: Reflection) => Promise<void>;
   deleteReflection: (id: string) => Promise<void>;
+  
+  // NEW REFLECTION METHODS
+  addReflectionQuestion: (data: ReflectionQuestion) => Promise<void>;
+  deleteReflectionQuestion: (id: string) => Promise<void>;
+  upsertReflectionAnswer: (data: ReflectionAnswer) => Promise<void>;
 
   upsertNote: (data: StudentNote) => Promise<void>;
   upsertAttendance: (data: AttendanceData) => Promise<void>;
@@ -75,11 +91,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // --- Confirmation Modal ---
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
+  const [confirmModalTitle, setConfirmModalTitle] = useState('Konfirmasi Hapus');
+  const [confirmModalBtnText, setConfirmModalBtnText] = useState('Ya, Hapus Data');
+  const [confirmModalVariant, setConfirmModalVariant] = useState<'danger' | 'primary' | 'logout'>('danger');
+  
   const confirmPromise = useRef<{ resolve: (value: boolean) => void } | null>(null);
 
-  const confirmAction = useCallback((message: string): Promise<boolean> => {
+  const confirmAction = useCallback((
+      message: string, 
+      title: string = "Konfirmasi Hapus", 
+      confirmText: string = "Ya, Hapus Data",
+      variant: 'danger' | 'primary' | 'logout' = 'danger'
+  ): Promise<boolean> => {
     setIsConfirmModalOpen(true);
     setConfirmModalMessage(message);
+    setConfirmModalTitle(title);
+    setConfirmModalBtnText(confirmText);
+    setConfirmModalVariant(variant);
+
     return new Promise((resolve) => {
       confirmPromise.current = { resolve };
     });
@@ -101,21 +130,76 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // --- Data Loading ---
+  // --- Initialize Auth from LocalStorage ---
+  useEffect(() => {
+    const savedUser = localStorage.getItem('appUser');
+    if (savedUser) {
+        setState(prev => ({ ...prev, user: JSON.parse(savedUser) }));
+    }
+  }, []);
+
+  // --- Load Settings (Logo/Name) for Login Screen ---
   useEffect(() => {
     if (isOnline) {
-      refreshData();
-    } else {
-        const saved = localStorage.getItem('raporPaudData');
-        if (saved) {
-            setState(JSON.parse(saved));
-        }
+        // Fetch only settings when app loads to populate login screen info
+        sheetService.fetchSettings().then(s => {
+            if (s) {
+                setState(prev => ({ ...prev, settings: s }));
+            }
+        });
     }
   }, [isOnline]);
 
+  // --- Full Data Loading (Authenticated) ---
   useEffect(() => {
-    localStorage.setItem('raporPaudData', JSON.stringify(state));
+    if (state.user) { // Only load full data if logged in
+        if (isOnline) {
+          refreshData();
+        } else {
+            const saved = localStorage.getItem('raporPaudData');
+            if (saved) {
+                // Jangan timpa user saat load data lokal
+                const parsed = JSON.parse(saved);
+                setState(prev => ({ ...parsed, user: prev.user }));
+            }
+        }
+    }
+  }, [isOnline, state.user?.username]); // Dependency on user username to prevent loop
+
+  useEffect(() => {
+    if (state.user) {
+        localStorage.setItem('raporPaudData', JSON.stringify(state));
+    }
   }, [state]);
+
+  // --- Auth Functions ---
+  const login = (u: string, p: string): boolean => {
+      // SIMPLE HARDCODED AUTH (Tanpa Database)
+      if (u === 'admin' && p === 'admin') {
+          const user: User = { username: 'admin', name: 'Administrator', role: 'admin' };
+          setState(prev => ({ ...prev, user }));
+          localStorage.setItem('appUser', JSON.stringify(user));
+          return true;
+      }
+      if (u === 'guru' && p === 'guru') {
+          const user: User = { username: 'guru', name: 'Guru Kelas', role: 'guru' };
+          setState(prev => ({ ...prev, user }));
+          localStorage.setItem('appUser', JSON.stringify(user));
+          return true;
+      }
+      if (u === 'ortu' && p === 'ortu') {
+          const user: User = { username: 'ortu', name: 'Orang Tua', role: 'orangtua' };
+          setState(prev => ({ ...prev, user }));
+          localStorage.setItem('appUser', JSON.stringify(user));
+          return true;
+      }
+      return false;
+  };
+
+  const logout = () => {
+      setState(prev => ({ ...prev, user: null }));
+      localStorage.removeItem('appUser');
+  };
 
   const refreshData = async () => {
     if (!isOnline) return;
@@ -124,6 +208,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data) {
       const normalizedData: AppState = {
           ...data,
+          user: state.user, // Keep current user
           classes: (data.classes || []).map(c => ({...c, id: String(c.id)})),
           students: (data.students || []).map(s => ({...s, id: String(s.id), classId: String(s.classId)})),
           tps: (data.tps || []).map(t => ({...t, id: String(t.id), classId: String(t.classId)})),
@@ -132,6 +217,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           p5Criteria: (data.p5Criteria || []).map(x => ({...x, id: String(x.id), classId: String(x.classId || '')})),
           p5Assessments: (data.p5Assessments || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId), criteriaId: String(x.criteriaId)})),
           reflections: (data.reflections || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId)})),
+          reflectionQuestions: (data.reflectionQuestions || []).map(x => ({...x, id: String(x.id), classId: String(x.classId)})),
+          reflectionAnswers: (data.reflectionAnswers || []).map(x => ({...x, id: String(x.id), questionId: String(x.questionId), studentId: String(x.studentId)})),
           notes: (data.notes || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId)})),
           attendance: (data.attendance || []).map(x => ({...x, id: String(x.id), studentId: String(x.studentId)})),
           settings: data.settings || INITIAL_SETTINGS
@@ -183,7 +270,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               if (res.status === 'error') throw new Error(res.message);
           }
           
-          setState(data); // Update local state
+          setState(prev => ({...data, user: prev.user})); // Update local state but keep user
           alert("Data berhasil dipulihkan dari Backup!");
           await refreshData();
       } catch (e: any) {
@@ -204,6 +291,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           // Reset Local State
           setState(prev => ({
               ...MOCK_DATA,
+              user: prev.user, // Keep User
               settings: prev.settings, // Keep Settings
               tps: keepTPs ? prev.tps : [] // Keep TPs optional
           }));
@@ -385,6 +473,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  // Deprecated Reflection Methods (but kept for compatibility)
   const addReflection = async (d: Reflection) => {
     const dStr = { ...d, id: String(d.id), studentId: String(d.studentId) };
     await handleAsyncAction(
@@ -406,6 +495,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         () => sheetService.delete('reflections', id), 
         () => setState(prev => ({ ...prev, reflections: prev.reflections.filter(i => i.id !== id) })), 
         'reflections', id
+    );
+  };
+
+  // --- NEW REFLECTION METHODS (Question & Answer) ---
+  const addReflectionQuestion = async (d: ReflectionQuestion) => {
+    const dStr = { ...d, id: String(d.id), classId: String(d.classId) };
+    await handleAsyncAction(
+        () => sheetService.create('reflectionQuestions', dStr), 
+        () => setState(prev => ({ ...prev, reflectionQuestions: [...prev.reflectionQuestions, dStr] })), 
+        'reflectionQuestions', dStr.id
+    );
+  };
+
+  const deleteReflectionQuestion = async (id: string) => {
+    await handleAsyncAction(
+        () => sheetService.delete('reflectionQuestions', id), 
+        () => setState(prev => ({ ...prev, reflectionQuestions: prev.reflectionQuestions.filter(i => i.id !== id) })), 
+        'reflectionQuestions', id
+    );
+  };
+
+  const upsertReflectionAnswer = async (d: ReflectionAnswer) => {
+    const dStr = { ...d, id: String(d.id), questionId: String(d.questionId), studentId: String(d.studentId) };
+    await handleAsyncAction(
+        () => {
+             const exists = state.reflectionAnswers.find(a => String(a.questionId) === dStr.questionId && String(a.studentId) === dStr.studentId);
+             return exists ? sheetService.update('reflectionAnswers', dStr) : sheetService.create('reflectionAnswers', dStr);
+        },
+        () => {
+            setState(prev => {
+                const list = prev.reflectionAnswers;
+                const idx = list.findIndex(a => String(a.questionId) === dStr.questionId && String(a.studentId) === dStr.studentId);
+                const newArr = [...list];
+                if (idx >= 0) newArr[idx] = dStr; else newArr.push(dStr);
+                return { ...prev, reflectionAnswers: newArr };
+            });
+        },
+        'reflectionAnswers', dStr.id
     );
   };
 
@@ -453,13 +580,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     <AppContext.Provider value={{
       ...state,
       isLoading, isOnline, refreshData,
-      confirmAction, isConfirmModalOpen, confirmModalMessage, handleConfirmModalConfirm, handleConfirmModalCancel,
+      login, logout,
+      confirmAction, isConfirmModalOpen, confirmModalMessage, confirmModalTitle, confirmModalBtnText, confirmModalVariant, handleConfirmModalConfirm, handleConfirmModalCancel,
       addClass, updateClass, deleteClass,
       addStudent, updateStudent, deleteStudent,
       addTp, updateTp, deleteTp,
       upsertAssessment, upsertCategoryResult, setSettings,
       addP5Criteria, updateP5Criteria, deleteP5Criteria, upsertP5Assessment,
       addReflection, updateReflection, deleteReflection,
+      addReflectionQuestion, deleteReflectionQuestion, upsertReflectionAnswer,
       upsertNote, upsertAttendance,
       handleBackup, handleRestore, handleResetSystem
     }}>

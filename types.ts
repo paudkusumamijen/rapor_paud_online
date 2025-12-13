@@ -12,6 +12,17 @@ export enum TPType {
   IMTAK = 'Dasar Literasi, Matematika, Sains, Teknologi, Rekayasa dan Seni'
 }
 
+// AUTH TYPES
+export type UserRole = 'admin' | 'guru' | 'orangtua';
+
+export interface User {
+  id?: string; // Optional karena user session mgkn tdk butuh id
+  username: string;
+  password?: string; // Needed for DB mapping
+  name: string;
+  role: UserRole;
+}
+
 export interface ClassData {
   id: string;
   name: string; // Kelas/Kelompok
@@ -90,11 +101,26 @@ export interface P5Assessment {
   generatedDescription?: string; // Hasil AI
 }
 
-// 2. REFLEKSI ORANG TUA
+// 2. REFLEKSI ORANG TUA (OLD STRUCTURE - DEPRECATED BUT KEPT FOR COMPATIBILITY IF NEEDED)
 export interface Reflection {
   id: string;
   studentId: string;
   question: string;
+  answer: string;
+}
+
+// 2.1 NEW REFLECTION STRUCTURE
+export interface ReflectionQuestion {
+  id: string;
+  classId: string;
+  question: string;
+  active: boolean; // status aktif
+}
+
+export interface ReflectionAnswer {
+  id: string;
+  questionId: string;
+  studentId: string;
   answer: string;
 }
 
@@ -139,6 +165,7 @@ export interface SchoolSettings {
 }
 
 export interface AppState {
+  user: User | null; // Auth State (Current Logged In)
   classes: ClassData[];
   students: Student[];
   tps: LearningObjective[];
@@ -148,7 +175,9 @@ export interface AppState {
   // New States
   p5Criteria: P5Criteria[];
   p5Assessments: P5Assessment[];
-  reflections: Reflection[];
+  reflections: Reflection[]; // Old
+  reflectionQuestions: ReflectionQuestion[]; // New
+  reflectionAnswers: ReflectionAnswer[]; // New
   notes: StudentNote[];
   attendance: AttendanceData[];
 }
@@ -162,7 +191,7 @@ export interface ApiResponse {
 
 export interface ApiPayload {
   action: 'create' | 'update' | 'delete' | 'readAll';
-  collection: 'classes' | 'students' | 'TPs' | 'assessments' | 'categoryResults' | 'settings' | 'p5Criteria' | 'p5Assessments' | 'reflections' | 'notes' | 'attendance';
+  collection: 'classes' | 'students' | 'TPs' | 'assessments' | 'categoryResults' | 'settings' | 'p5Criteria' | 'p5Assessments' | 'reflections' | 'reflectionQuestions' | 'reflectionAnswers' | 'notes' | 'attendance';
   data?: any;
   id?: string;
 }

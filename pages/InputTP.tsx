@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { LearningObjective, TPType } from '../types';
 import { TP_CATEGORIES } from '../constants';
-import { Trash2, Edit2, Plus, Filter, X, Save } from 'lucide-react';
+import { Trash2, Edit2, Plus, Filter, X, Save, ChevronDown, ChevronRight } from 'lucide-react';
 
 const InputTP: React.FC = () => {
   const { tps, classes, addTp, updateTp, deleteTp, confirmAction } = useApp();
@@ -11,6 +11,9 @@ const InputTP: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<LearningObjective>>({ category: TPType.ABP });
+
+  // State untuk mengontrol Accordion (key: nama kategori, value: boolean true/false)
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const filteredTps = selectedClassId 
     ? tps.filter(t => String(t.classId) === String(selectedClassId))
@@ -53,6 +56,13 @@ const InputTP: React.FC = () => {
     }
   };
 
+  const toggleCategory = (category: string) => {
+      setExpandedCategories(prev => ({
+          ...prev,
+          [category]: !prev[category]
+      }));
+  };
+
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -82,41 +92,68 @@ const InputTP: React.FC = () => {
       </div>
 
       {selectedClassId ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {TP_CATEGORIES.map(category => {
                 const categoryTps = filteredTps.filter(t => t.category === category);
-                // Kita tetap tampilkan header kategori meskipun kosong agar user tahu strukturnya
+                const isOpen = expandedCategories[category];
                 
                 return (
-                    <div key={category} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="bg-slate-100 p-3 border-b border-slate-200 font-bold text-slate-700 flex justify-between items-center">
-                            <span>{category}</span>
-                            <span className="text-xs bg-white px-2 py-1 rounded border text-slate-500 font-normal">{categoryTps.length} TP</span>
+                    <div key={category} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-200">
+                        {/* Header Accordion */}
+                        <div 
+                            onClick={() => toggleCategory(category)}
+                            className={`p-4 font-bold text-slate-700 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors ${isOpen ? 'bg-slate-50 border-b border-slate-200' : 'bg-white'}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                {isOpen ? <ChevronDown size={20} className="text-teal-600"/> : <ChevronRight size={20} className="text-slate-400"/>}
+                                <span>{category}</span>
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded border font-normal ${categoryTps.length > 0 ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-slate-100 text-slate-500'}`}>
+                                {categoryTps.length} TP
+                            </span>
                         </div>
-                        {categoryTps.length > 0 ? (
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b bg-slate-50/50"><tr><th className="p-3 font-semibold text-slate-600">Tujuan Pembelajaran</th><th className="p-3 font-semibold text-slate-600">Aktivitas</th><th className="p-3 text-right font-semibold text-slate-600">Aksi</th></tr></thead>
-                                <tbody className="text-slate-700">
-                                    {categoryTps.map(tp => (
-                                        <tr key={tp.id} className="border-b last:border-0 hover:bg-slate-50">
-                                            <td className="p-3 align-top">{tp.description}</td>
-                                            <td className="p-3 align-top text-slate-600 italic">{tp.activity}</td>
-                                            <td className="p-3 flex justify-end gap-2 align-top">
-                                                <button type="button" onClick={() => handleOpenModal(tp)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"><Edit2 size={16}/></button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleDelete(tp.id)} 
-                                                    className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                                                >
-                                                    <Trash2 size={16}/>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="p-6 text-center text-slate-400 italic text-sm">Belum ada TP untuk aspek ini.</div>
+
+                        {/* Content Accordion */}
+                        {isOpen && (
+                            <div className="animate-in slide-in-from-top-2 duration-200">
+                                {categoryTps.length > 0 ? (
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="border-b bg-slate-50/50"><tr><th className="p-3 font-semibold text-slate-600 w-1/3">Tujuan Pembelajaran</th><th className="p-3 font-semibold text-slate-600">Aktivitas</th><th className="p-3 text-right font-semibold text-slate-600 w-24">Aksi</th></tr></thead>
+                                        <tbody className="text-slate-700">
+                                            {categoryTps.map(tp => (
+                                                <tr key={tp.id} className="border-b last:border-0 hover:bg-slate-50">
+                                                    <td className="p-3 align-top">{tp.description}</td>
+                                                    <td className="p-3 align-top text-slate-600 italic">{tp.activity}</td>
+                                                    <td className="p-3 flex justify-end gap-2 align-top">
+                                                        <button type="button" onClick={() => handleOpenModal(tp)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"><Edit2 size={16}/></button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleDelete(tp.id)} 
+                                                            className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                        >
+                                                            <Trash2 size={16}/>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="p-8 text-center text-slate-400 italic text-sm border-t border-slate-100">
+                                        <p className="mb-2">Belum ada TP untuk aspek ini.</p>
+                                        <button 
+                                            onClick={() => {
+                                                setFormData({ category: category as TPType, description: '', activity: '' });
+                                                setIsEditing(null);
+                                                setIsModalOpen(true);
+                                            }}
+                                            className="text-teal-600 font-bold hover:underline"
+                                        >
+                                            + Tambah TP Sekarang
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
                 )

@@ -22,6 +22,20 @@ const Cetak: React.FC = () => {
   const studentNote = notes.find(n => String(n.studentId) === String(selectedStudentId));
   const studentAttendance = attendance.find(a => String(a.studentId) === String(selectedStudentId)) || { sick: 0, permission: 0, alpha: 0 };
 
+  // --- LOGIKA BARU P5: Hanya ambil kriteria kelas siswa YANG SUDAH DINILAI ---
+  const studentP5Criteria = selectedStudent ? p5Criteria.filter(c => {
+      // 1. Cek apakah kriteria milik kelas siswa ini
+      const isClassMatch = String(c.classId) === String(selectedStudent.classId);
+      
+      // 2. Cek apakah ada penilaian untuk kriteria ini
+      const hasAssessment = p5Assessments.some(a => 
+          String(a.studentId) === String(selectedStudentId) && 
+          String(a.criteriaId) === String(c.id)
+      );
+
+      return isClassMatch && hasAssessment;
+  }) : [];
+
   const handlePrint = () => {
     if (!selectedStudent) { alert("Pilih siswa terlebih dahulu."); return; }
 
@@ -438,7 +452,7 @@ const Cetak: React.FC = () => {
                     </div>
 
                     {/* II. KOKURIKULER (P5) */}
-                    {p5Criteria.length > 0 && (
+                    {studentP5Criteria.length > 0 && (
                         <div className="mb-6">
                             <h3 className="text-sm font-bold text-slate-900 uppercase mb-2">II. Projek Penguatan Profil Pelajar Pancasila (P5)</h3>
                             <table className="report-table">
@@ -449,7 +463,7 @@ const Cetak: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {p5Criteria.map((c) => {
+                                    {studentP5Criteria.map((c) => {
                                         const assessment = p5Assessments.find(a => String(a.studentId) === String(selectedStudentId) && String(a.criteriaId) === String(c.id));
                                         const score = assessment?.score;
                                         let desc = assessment?.generatedDescription;

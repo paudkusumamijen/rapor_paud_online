@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
   LayoutDashboard, Users, GraduationCap, BookOpen, PenTool, Printer, Settings, 
-  Star, MessageCircle, FileText, CalendarCheck, X, ChevronDown, ChevronRight, Database, ClipboardList
+  Star, MessageCircle, FileText, CalendarCheck, X, ChevronDown, ChevronRight, Database, ClipboardList, LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,12 +20,25 @@ type MenuItem = {
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { settings } = useApp();
+  const { settings, user, logout, confirmAction } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
   
-  // Default state kosong ({}) agar semua menu tertutup saat awal dimuat
-  // Kecuali jika ada logic useEffect di bawah yang mendeteksi URL aktif
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  const handleLogout = async () => {
+    const isConfirmed = await confirmAction(
+        "Apakah Anda yakin ingin keluar dari aplikasi?",
+        "Konfirmasi Keluar",
+        "Ya, Keluar Aplikasi",
+        "logout"
+    );
+
+    if (isConfirmed) {
+        logout();
+        navigate('/');
+    }
+  };
 
   const menuStructure: MenuItem[] = [
     { 
@@ -42,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { key: 'kelas', to: "/kelas", icon: <Users size={18} />, label: "Data Kelas" },
         { key: 'siswa', to: "/siswa", icon: <GraduationCap size={18} />, label: "Data Siswa" },
         { key: 'tp', to: "/tp", icon: <BookOpen size={18} />, label: "Input TP" },
-        { key: 'p5', to: "/kokurikuler", icon: <Star size={18} />, label: "Kokurikuler (P5)" },
+        { key: 'data_p5', to: "/data-p5", icon: <Star size={18} />, label: "Data P5 (Projek)" },
       ]
     },
     {
@@ -50,7 +63,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       label: "Input Nilai",
       icon: <ClipboardList size={20} />,
       children: [
-        { key: 'input_nilai', to: "/nilai", icon: <PenTool size={18} />, label: "Input Nilai Rapor" },
+        { key: 'input_nilai', to: "/nilai", icon: <PenTool size={18} />, label: "Nilai Intrakurikuler" },
+        { key: 'nilai_p5', to: "/nilai-p5", icon: <Star size={18} />, label: "Nilai P5 (Projek)" },
         { key: 'refleksi', to: "/refleksi", icon: <MessageCircle size={18} />, label: "Refleksi Ortu" },
         { key: 'catatan', to: "/catatan", icon: <FileText size={18} />, label: "Catatan Anak" },
         { key: 'kehadiran', to: "/kehadiran", icon: <CalendarCheck size={18} />, label: "Kehadiran" },
@@ -70,16 +84,42 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     },
   ];
 
-  // Auto expand menu based on active route
-  // Menu akan otomatis terbuka HANYA jika pengguna sedang berada di halaman anak (sub-menu) tersebut
+  // FILTER MENU BASED ON ROLE
+  const filteredMenu = menuStructure.filter(item => {
+      if (!user) return false;
+      if (user.role === 'admin') return true; 
+      
+      // Guru Restrictions
+      if (user.role === 'guru') {
+          const allowedKeys = ['dashboard', 'nilai', 'cetak'];
+          return allowedKeys.includes(item.key);
+      }
+
+      // Orang Tua Restrictions
+      if (user.role === 'orangtua') {
+        // Orang Tua hanya bisa melihat menu Refleksi.
+        // Karena refleksi ada di dalam children 'nilai', kita perlu logic khusus atau memindahkannya.
+        // Untuk simplisitas, jika role orangtua, kita buat menu custom.
+        return false; 
+      }
+      return false;
+  });
+
+  // Custom Menu for Orang Tua
+  const parentMenu: MenuItem[] = [
+      { key: 'refleksi_ortu', to: "/refleksi", icon: <MessageCircle size={20} />, label: "Refleksi Orang Tua" }
+  ];
+
+  const finalMenu = user?.role === 'orangtua' ? parentMenu : filteredMenu;
+
+  // Auto expand menu
   useEffect(() => {
     const newOpenState = { ...openMenus };
     let hasChange = false;
 
-    menuStructure.forEach(item => {
+    finalMenu.forEach(item => {
       if (item.children) {
         const isChildActive = item.children.some(child => child.to === location.pathname);
-        // Jika anak aktif dan menu induk belum terbuka, maka buka
         if (isChildActive && !newOpenState[item.key]) {
           newOpenState[item.key] = true;
           hasChange = true;
@@ -88,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     });
 
     if (hasChange) setOpenMenus(newOpenState);
-  }, [location.pathname]);
+  }, [location.pathname, user?.role]);
 
   const toggleMenu = (key: string) => {
     setOpenMenus(prev => ({ ...prev, [key]: !prev[key] }));
@@ -96,7 +136,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Sidebar Container */}
       <aside 
         className={`
           fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white transition-transform duration-300 ease-in-out shadow-2xl
@@ -107,7 +146,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full">
           {/* Header Sidebar */}
           <div className="p-6 border-b border-slate-700 flex flex-col items-center text-center relative">
-             {/* Close Button (Mobile Only) */}
              <button 
               onClick={onClose}
               className="md:hidden absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
@@ -115,7 +153,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <X size={24} />
             </button>
 
-            {/* Logo Container */}
             <div className="w-16 h-16 bg-white rounded-full p-1 mb-3 flex items-center justify-center overflow-hidden border-4 border-slate-600 shadow-lg">
                 <img 
                     src={settings.logoUrl || "https://cdn-icons-png.flaticon.com/512/2997/2997300.png"} 
@@ -124,23 +161,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 />
             </div>
             
-            {/* Title Text */}
             <div>
               <h1 className="text-lg font-bold text-white tracking-wide">
                 Rapor Merdeka
               </h1>
               <p className="text-xs font-semibold text-teal-400 mt-1 uppercase tracking-wider">
-                {settings.name || "PAUD KUSUMA"}
+                {user?.role === 'admin' ? 'Administrator' : user?.role === 'guru' ? 'Guru Kelas' : 'Orang Tua'}
               </p>
             </div>
           </div>
 
           {/* Navigation Links */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-            {menuStructure.map((item) => (
+            {finalMenu.map((item) => (
               <div key={item.key} className="mb-1">
                 {item.children ? (
-                  // PARENT MENU (Dropdown)
                   <div>
                     <button
                       onClick={() => toggleMenu(item.key)}
@@ -153,7 +188,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       {openMenus[item.key] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </button>
                     
-                    {/* SUB MENUS */}
                     {openMenus[item.key] && (
                       <div className="ml-4 pl-4 border-l border-slate-700 mt-1 space-y-1 animate-in slide-in-from-top-2 duration-200">
                         {item.children.map(child => (
@@ -177,7 +211,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     )}
                   </div>
                 ) : (
-                  // SINGLE MENU
                   <NavLink
                     to={item.to!}
                     onClick={onClose}
@@ -197,10 +230,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ))}
           </nav>
 
-          {/* Footer Sidebar */}
-          <div className="p-4 border-t border-slate-700 text-center bg-slate-900">
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Versi Aplikasi 1.0</p>
-            <p className="text-xs font-bold text-slate-300">By PAUD KUSUMA Mijen Demak</p>
+          {/* Footer Sidebar (Logout) */}
+          <div className="p-4 border-t border-slate-700 bg-slate-900">
+             <button 
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition-colors text-sm font-bold shadow-md"
+             >
+                 <LogOut size={16} /> Keluar Aplikasi
+             </button>
+            <p className="text-[10px] text-slate-500 tracking-widest mt-3 text-center">Versi Aplikasi 1.0 &copy; 2025</p>
+            <p className="text-xs font-semibold text-teal-400 mt-0 uppercase tracking-wider text-center">{settings.name || "PAUD KUSUMA"}</p>
           </div>
         </div>
       </aside>
