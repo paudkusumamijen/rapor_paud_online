@@ -16,7 +16,7 @@ const DonutChart: React.FC<{ percent: number; size?: number; color?: string }> =
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       {/* SVG Container */}
       <svg className="transform -rotate-90 w-full h-full">
-        {/* Background Circle (Red for 'Belum Dinilai') */}
+        {/* Background Circle (Merah Muda untuk yang belum dinilai) */}
         <circle
           cx="50%"
           cy="50%"
@@ -26,7 +26,7 @@ const DonutChart: React.FC<{ percent: number; size?: number; color?: string }> =
           fill="transparent"
           className="text-red-100" 
         />
-        {/* Progress Circle (Green for 'Sudah Dinilai') */}
+        {/* Progress Circle (Dynamic Color) */}
         <circle
           cx="50%"
           cy="50%"
@@ -42,7 +42,7 @@ const DonutChart: React.FC<{ percent: number; size?: number; color?: string }> =
       </svg>
       {/* Text Percentage in Middle */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-700">
-        <span className="text-xl font-bold">{percent}%</span>
+        <span className={`text-xl font-bold ${color}`}>{percent}%</span>
         <span className="text-[10px] uppercase font-semibold text-slate-400">Selesai</span>
       </div>
     </div>
@@ -81,6 +81,15 @@ const Dashboard: React.FC = () => {
           total: totalStudents,
           percent: Math.round((gradedCount / totalStudents) * 100)
       };
+  };
+
+  // --- LOGIKA WARNA DINAMIS ---
+  const getProgressColor = (percent: number) => {
+    if (percent <= 15) return "text-red-800";       // Merah Tua (0-15%)
+    if (percent <= 40) return "text-orange-500";    // Jingga (16-40%)
+    if (percent <= 65) return "text-yellow-500";    // Kuning (41-65%)
+    if (percent < 100) return "text-lime-500";      // Hijau Muda (66-99%)
+    return "text-green-700";                        // Hijau Tua (100%)
   };
 
   return (
@@ -154,8 +163,8 @@ const Dashboard: React.FC = () => {
                 {classes.map(cls => {
                     const progress = getClassProgress(cls.id);
                     
-                    // WARNA HIJAU UNTUK SUDAH DINILAI (FOREGROUND)
-                    const chartColor = "text-green-600";
+                    // DAPATKAN WARNA DINAMIS
+                    const chartColor = getProgressColor(progress.percent);
 
                     return (
                         <div key={cls.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
@@ -164,7 +173,7 @@ const Dashboard: React.FC = () => {
                                     <h3 className="font-bold text-lg text-slate-800">{cls.name}</h3>
                                     <p className="text-xs text-slate-500 font-medium">Wali Kelas: {cls.teacherName}</p>
                                 </div>
-                                {progress.percent === 100 && <CheckCircle2 size={20} className="text-green-500" />}
+                                {progress.percent === 100 && <CheckCircle2 size={20} className="text-green-700" />}
                             </div>
                             
                             <div className="flex items-center justify-center py-2">
@@ -175,16 +184,16 @@ const Dashboard: React.FC = () => {
                                 <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center">
                                     <span className="text-xs text-slate-400 font-semibold uppercase">Sudah Dinilai</span>
                                     <div className="flex items-center gap-1 font-bold text-slate-700">
-                                        {/* Indikator Hijau */}
-                                        <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                                        {/* Indikator Mengikuti Warna Chart */}
+                                        <div className={`w-2 h-2 rounded-full ${chartColor.replace('text-', 'bg-')}`}></div>
                                         {progress.graded} Siswa
                                     </div>
                                 </div>
                                 <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center">
                                     <span className="text-xs text-slate-400 font-semibold uppercase">Belum</span>
                                     <div className="flex items-center gap-1 font-bold text-slate-700">
-                                        {/* Indikator Merah */}
-                                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                                        {/* Indikator Merah Muda */}
+                                        <div className="w-2 h-2 rounded-full bg-red-100"></div>
                                         {progress.notGraded} Siswa
                                     </div>
                                 </div>
